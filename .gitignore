@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+generate-icons.js
+*.msi
+developer-buddy-*.md
