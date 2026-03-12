@@ -237,6 +237,7 @@ function ConnectGitHub({ onConnected }: { onConnected: (cfg: GitHubConfig) => vo
 function MergeStatusIcon({ state, loading }: { state: MergeState | null; loading: boolean }) {
   if (loading) return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
   if (!state || state === 'draft') return null;
+  if (state === 'unknown') return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
   if (state === 'clean')
     return <span title="Ready to merge" className="shrink-0 flex"><CheckCircle2 size={13} className="text-green-500" /></span>;
   if (state === 'dirty')
@@ -326,6 +327,9 @@ function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged:
           )}
           {!pr.draft && mergeState === 'unstable' && (
             <span className="text-yellow-500 font-medium">Checks failing</span>
+          )}
+          {!pr.draft && mergeState === 'unknown' && (
+            <span className="text-text-muted font-medium">Pending…</span>
           )}
         </div>
       </button>
