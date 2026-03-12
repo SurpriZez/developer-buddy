@@ -11,8 +11,17 @@ const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
 // Clean up any legacy registered content scripts on install
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   syncUserScriptRegistrations().catch(console.error);
+
+  if (details.reason === 'install') {
+    chrome.storage.local.get('developer_buddy_user').then((result) => {
+      const user = result['developer_buddy_user'] as { wizardCompleted?: boolean } | undefined;
+      if (!user?.wizardCompleted) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('wizard/wizard.html') });
+      }
+    }).catch(console.error);
+  }
 });
 
 // Re-sync when userScripts change in storage

@@ -26,12 +26,12 @@ export function UserScriptPanel() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Code size={15} className="text-brand-500" />
-          <span className="text-sm font-semibold text-gray-800">Installed Scripts</span>
+          <Code size={15} className="text-accent" />
+          <span className="text-sm font-semibold text-text-primary">Installed Scripts</span>
         </div>
         <button
           onClick={() => chrome.runtime.openOptionsPage()}
-          className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium"
+          className="inline-flex items-center gap-1 text-xs text-accent hover:opacity-90 font-medium"
         >
           <Settings size={12} />
           Manage Scripts →
@@ -39,13 +39,13 @@ export function UserScriptPanel() {
       </div>
 
       {scripts.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 space-y-2">
-          <Code size={28} className="mx-auto text-gray-300" />
+        <div className="text-center py-10 text-text-muted space-y-2">
+          <Code size={28} className="mx-auto text-text-muted" />
           <p className="text-sm">No user scripts installed.</p>
           <p className="text-xs">Create scripts in Settings to run them automatically on matching pages.</p>
           <button
             onClick={() => chrome.runtime.openOptionsPage()}
-            className="mt-1 text-xs text-brand-600 hover:underline"
+            className="mt-1 text-xs text-accent hover:underline"
           >
             Open Settings →
           </button>
@@ -56,16 +56,16 @@ export function UserScriptPanel() {
             <div
               key={s.id}
               className={`flex items-start gap-2.5 px-3 py-2.5 border rounded-lg ${
-                s.enabled ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'
+                s.enabled ? 'border-theme-border bg-surface' : 'border-theme-border bg-[var(--color-bg-primary)] opacity-60'
               }`}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-gray-900">{s.name}</span>
-                  <span className="text-xs text-gray-400 font-mono">v{s.version}</span>
+                  <span className="text-xs font-semibold text-text-primary">{s.name}</span>
+                  <span className="text-xs text-text-muted font-mono">v{s.version}</span>
                 </div>
                 {s.matchPatterns.length > 0 && (
-                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                  <p className="text-xs text-text-muted truncate mt-0.5">
                     {s.matchPatterns[0]}
                     {s.matchPatterns.length > 1 && ` +${s.matchPatterns.length - 1} more`}
                   </p>
@@ -74,7 +74,7 @@ export function UserScriptPanel() {
               <button
                 onClick={() => handleToggle(s)}
                 className={`shrink-0 mt-0.5 transition-colors ${
-                  s.enabled ? 'text-brand-500 hover:text-brand-700' : 'text-gray-300 hover:text-gray-500'
+                  s.enabled ? 'text-accent hover:opacity-90' : 'text-text-muted hover:text-text-secondary'
                 }`}
                 title={s.enabled ? 'Disable' : 'Enable'}
               >

@@ -47,10 +47,10 @@ export function EnvManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Environment Profiles</h2>
+        <h2 className="text-base font-semibold text-text-primary">Environment Profiles</h2>
         <button
           onClick={() => setEditing('new')}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent text-[var(--color-bg-primary)] rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
         >
           <Plus size={14} />
           New Profile
@@ -58,7 +58,7 @@ export function EnvManager() {
       </div>
 
       {profiles.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-text-muted">
           <p className="text-sm">No profiles yet.</p>
           <p className="text-xs mt-1">Create a profile to manage environment variables.</p>
         </div>
@@ -67,10 +67,10 @@ export function EnvManager() {
           {profiles.map((p) => (
             <div
               key={p.id}
-              className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+              className={`flex items-center justify-between px-4 py-3 rounded-card border ${
                 p.isActive
-                  ? 'border-green-300 bg-green-50'
-                  : 'border-gray-200 bg-white'
+                  ? 'border-accent bg-accent-container'
+                  : 'border-theme-border bg-surface'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -80,12 +80,12 @@ export function EnvManager() {
                   }`}
                 />
                 <div className="min-w-0">
-                  <span className="font-medium text-sm text-gray-900">{p.name}</span>
-                  <span className="ml-2 text-xs text-gray-400">
+                  <span className="font-medium text-sm text-text-primary">{p.name}</span>
+                  <span className="ml-2 text-xs text-text-muted">
                     {p.variables.length} variable{p.variables.length !== 1 ? 's' : ''}
                   </span>
                   {p.isActive && (
-                    <span className="ml-2 text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">
+                    <span className="ml-2 text-xs font-medium text-accent bg-accent-container px-1.5 py-0.5 rounded-full">
                       Active
                     </span>
                   )}
@@ -96,14 +96,14 @@ export function EnvManager() {
                 {!p.isActive && (
                   <button
                     onClick={() => handleSetActive(p.id)}
-                    className="px-2.5 py-1 text-xs font-medium text-brand-600 border border-brand-300 rounded hover:bg-brand-50 transition-colors"
+                    className="px-2.5 py-1 text-xs font-medium text-accent border border-accent rounded hover:bg-accent-container transition-colors"
                   >
                     Set Active
                   </button>
                 )}
                 <button
                   onClick={() => setEditing(p)}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                  className="p-1.5 text-text-muted hover:text-text-primary hover:bg-accent-container rounded transition-colors"
                   title="Edit"
                 >
                   <Pencil size={14} />
