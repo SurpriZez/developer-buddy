@@ -27,7 +27,9 @@ jobs:
       - name: Build extension
         run: npm run build
 
-      - name: Confirm dist output
-        run: |
-          echo "Build artifacts:"
-          find dist -type f | sort
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: developer-buddy-dist
+          path: dist/
+          retention-days: 7
