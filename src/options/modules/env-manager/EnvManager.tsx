@@ -76,7 +76,7 @@ export function EnvManager() {
               <div className="flex items-center gap-2 min-w-0">
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${
-                    p.isActive ? 'bg-green-500' : 'bg-gray-300'
+                    p.isActive ? 'bg-green-500' : 'bg-text-muted'
                   }`}
                 />
                 <div className="min-w-0">
@@ -111,7 +111,7 @@ export function EnvManager() {
                 <button
                   onClick={() => handleDelete(p.id)}
                   disabled={p.isActive}
-                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1.5 text-text-muted hover:text-red-400 hover:bg-accent-container rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   title={p.isActive ? 'Cannot delete active profile' : 'Delete'}
                 >
                   <Trash2 size={14} />

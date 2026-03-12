@@ -58,8 +58,8 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 leading-relaxed">
-      <HelpCircle size={13} className="shrink-0 mt-0.5 text-blue-400" />
+    <div className="flex gap-2 bg-accent-container border border-accent/30 rounded-lg px-3 py-2 text-xs text-text-secondary leading-relaxed">
+      <HelpCircle size={13} className="shrink-0 mt-0.5 text-accent" />
       <span>{children}</span>
     </div>
   );

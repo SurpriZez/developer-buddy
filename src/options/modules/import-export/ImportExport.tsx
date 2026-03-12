@@ -107,9 +107,9 @@ export function ImportExport() {
           Download all your scripts, profiles, requests, and settings as a JSON
           file.
         </p>
-        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-          <AlertTriangle size={13} className="text-yellow-600 mt-0.5 shrink-0" />
-          <p className="text-xs text-yellow-700">
+        <div className="flex items-start gap-2 bg-accent-container border border-accent/30 rounded-lg px-3 py-2">
+          <AlertTriangle size={13} className="text-accent mt-0.5 shrink-0" />
+          <p className="text-xs text-text-secondary">
             Secret variable values are stripped from the export for security.
           </p>
         </div>
@@ -149,16 +149,16 @@ export function ImportExport() {
         </button>
 
         {importError && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            <AlertTriangle size={13} className="text-red-500 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-700">{importError}</p>
+          <div className="flex items-start gap-2 bg-accent-container border border-accent/30 rounded-lg px-3 py-2">
+            <AlertTriangle size={13} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-red-400">{importError}</p>
           </div>
         )}
 
         {importSuccess && (
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            <CheckCircle size={13} className="text-green-500 shrink-0" />
-            <p className="text-xs text-green-700">Data imported successfully!</p>
+          <div className="flex items-center gap-2 bg-accent-container border border-accent/30 rounded-lg px-3 py-2">
+            <CheckCircle size={13} className="text-accent shrink-0" />
+            <p className="text-xs text-text-secondary">Data imported successfully!</p>
           </div>
         )}
       </div>

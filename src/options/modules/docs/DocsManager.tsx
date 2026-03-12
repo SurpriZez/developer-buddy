@@ -179,7 +179,7 @@ export function DocsManager() {
                   </button>
                   <button
                     onClick={() => handleDelete(s.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    className="p-1.5 text-text-muted hover:text-red-400 hover:bg-accent-container rounded transition-colors"
                     title="Delete"
                   >
                     <Trash2 size={14} />
