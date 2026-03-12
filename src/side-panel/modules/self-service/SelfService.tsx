@@ -88,6 +88,7 @@ type MergeState = 'clean' | 'dirty' | 'blocked' | 'behind' | 'unstable' | 'unkno
 interface PRDetail {
   mergeable: boolean | null;
   mergeable_state: MergeState;
+  head: { sha: string };
 }
 
 async function fetchPRDetail(token: string, prApiUrl: string): Promise<PRDetail> {
@@ -99,6 +100,19 @@ async function fetchPRDetail(token: string, prApiUrl: string): Promise<PRDetail>
   });
   if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
   return res.json();
+}
+
+async function hasRunsPending(token: string, repoApiUrl: string, sha: string): Promise<boolean> {
+  const res = await fetch(`${repoApiUrl}/commits/${sha}/check-runs?per_page=100`, {
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github+json',
+    },
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  const runs: { status: string }[] = data.check_runs ?? [];
+  return runs.some((r) => r.status === 'in_progress' || r.status === 'queued');
 }
 
 async function mergePR(token: string, prApiUrl: string): Promise<void> {
@@ -234,10 +248,11 @@ function ConnectGitHub({ onConnected }: { onConnected: (cfg: GitHubConfig) => vo
   );
 }
 
-function MergeStatusIcon({ state, loading }: { state: MergeState | null; loading: boolean }) {
+function MergeStatusIcon({ state, loading, checksPending }: { state: MergeState | null; loading: boolean; checksPending?: boolean }) {
   if (loading) return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
   if (!state || state === 'draft') return null;
-  if (state === 'unknown') return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
+  if (state === 'unknown' || (state === 'unstable' && checksPending))
+    return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
   if (state === 'clean')
     return <span title="Ready to merge" className="shrink-0 flex"><CheckCircle2 size={13} className="text-green-500" /></span>;
   if (state === 'dirty')
@@ -247,6 +262,7 @@ function MergeStatusIcon({ state, loading }: { state: MergeState | null; loading
 
 function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged: () => void }) {
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
+  const [checksPending, setChecksPending] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState('');
@@ -256,7 +272,13 @@ function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged:
     if (!url || pr.draft) return;
     setStatusLoading(true);
     fetchPRDetail(token, url)
-      .then((detail) => setMergeState(detail.mergeable_state))
+      .then(async (detail) => {
+        setMergeState(detail.mergeable_state);
+        if (detail.mergeable_state === 'unstable') {
+          const pending = await hasRunsPending(token, pr.repository_url, detail.head.sha);
+          setChecksPending(pending);
+        }
+      })
       .catch(() => setMergeState('unknown'))
       .finally(() => setStatusLoading(false));
   }, [pr, token]);
@@ -293,7 +315,7 @@ function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged:
             </span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <MergeStatusIcon state={mergeState} loading={statusLoading} />
+            <MergeStatusIcon state={mergeState} loading={statusLoading} checksPending={checksPending} />
             <span className="text-xs text-text-muted font-mono">#{pr.number}</span>
           </div>
         </div>
@@ -325,7 +347,10 @@ function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged:
           {!pr.draft && mergeState === 'behind' && (
             <span className="text-yellow-500 font-medium">Branch behind</span>
           )}
-          {!pr.draft && mergeState === 'unstable' && (
+          {!pr.draft && mergeState === 'unstable' && checksPending && (
+            <span className="text-text-muted font-medium">Pending…</span>
+          )}
+          {!pr.draft && mergeState === 'unstable' && !checksPending && (
             <span className="text-yellow-500 font-medium">Checks failing</span>
           )}
           {!pr.draft && mergeState === 'unknown' && (
