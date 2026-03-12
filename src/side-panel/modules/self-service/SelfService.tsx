@@ -9,6 +9,9 @@ import {
   Eye,
   MessageSquare,
   Clock,
+  CheckCircle2,
+  XCircle,
+  GitMerge,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +81,41 @@ async function clearGitHubConfig(): Promise<void> {
   return new Promise((resolve) => {
     chrome.storage.local.remove('developer_buddy_github', resolve);
   });
+}
+
+type MergeState = 'clean' | 'dirty' | 'blocked' | 'behind' | 'unstable' | 'unknown' | 'draft';
+
+interface PRDetail {
+  mergeable: boolean | null;
+  mergeable_state: MergeState;
+}
+
+async function fetchPRDetail(token: string, prApiUrl: string): Promise<PRDetail> {
+  const res = await fetch(prApiUrl, {
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github+json',
+    },
+  });
+  if (!res.ok) throw new Error(`GitHub API error ${res.status}`);
+  return res.json();
+}
+
+async function mergePR(token: string, prApiUrl: string): Promise<void> {
+  // prApiUrl is like https://api.github.com/repos/{owner}/{repo}/pulls/{number}
+  const res = await fetch(`${prApiUrl}/merge`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ merge_method: 'merge' }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { message?: string }).message ?? `Merge failed (${res.status})`);
+  }
 }
 
 async function searchPRs(token: string, query: string): Promise<GitHubPR[]> {
@@ -196,53 +234,121 @@ function ConnectGitHub({ onConnected }: { onConnected: (cfg: GitHubConfig) => vo
   );
 }
 
-function PRRow({ pr }: { pr: GitHubPR }) {
-  const handleClick = () => {
-    chrome.tabs.create({ url: pr.html_url });
+function MergeStatusIcon({ state, loading }: { state: MergeState | null; loading: boolean }) {
+  if (loading) return <Loader2 size={13} className="animate-spin text-text-muted shrink-0" />;
+  if (!state || state === 'draft') return null;
+  if (state === 'clean')
+    return <span title="Ready to merge" className="shrink-0 flex"><CheckCircle2 size={13} className="text-green-500" /></span>;
+  if (state === 'dirty')
+    return <span title="Merge conflicts" className="shrink-0 flex"><XCircle size={13} className="text-red-500" /></span>;
+  return <span title={`Cannot merge: ${state}`} className="shrink-0 flex"><AlertCircle size={13} className="text-yellow-500" /></span>;
+}
+
+function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged: () => void }) {
+  const [mergeState, setMergeState] = useState<MergeState | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState('');
+
+  useEffect(() => {
+    const url = pr.pull_request?.url;
+    if (!url || pr.draft) return;
+    setStatusLoading(true);
+    fetchPRDetail(token, url)
+      .then((detail) => setMergeState(detail.mergeable_state))
+      .catch(() => setMergeState('unknown'))
+      .finally(() => setStatusLoading(false));
+  }, [pr, token]);
+
+  const handleMerge = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = pr.pull_request?.url;
+    if (!url) return;
+    setMerging(true);
+    setMergeError('');
+    try {
+      await mergePR(token, url);
+      onMerged();
+    } catch (err) {
+      setMergeError(err instanceof Error ? err.message : 'Merge failed');
+      setMerging(false);
+    }
   };
 
   return (
-    <button
-      onClick={handleClick}
-      className="w-full text-left border border-theme-border rounded-card px-3 py-2.5 bg-surface hover:bg-accent-container transition-colors space-y-1"
-    >
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
-          <span className="shrink-0 inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-accent-container text-accent border border-accent/30 leading-tight">
-            {repoName(pr.repository_url)}
-          </span>
-          <span
-            className={`text-xs font-medium leading-snug ${pr.draft ? 'text-text-muted' : 'text-text-primary'}`}
-          >
-            {pr.title}
-          </span>
+    <div className="border border-theme-border rounded-card bg-surface overflow-hidden">
+      <button
+        onClick={() => chrome.tabs.create({ url: pr.html_url })}
+        className="w-full text-left px-3 py-2.5 hover:bg-accent-container transition-colors space-y-1"
+      >
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0">
+            <span className="shrink-0 inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-accent-container text-accent border border-accent/30 leading-tight">
+              {repoName(pr.repository_url)}
+            </span>
+            <span className={`text-xs font-medium leading-snug ${pr.draft ? 'text-text-muted' : 'text-text-primary'}`}>
+              {pr.title}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <MergeStatusIcon state={mergeState} loading={statusLoading} />
+            <span className="text-xs text-text-muted font-mono">#{pr.number}</span>
+          </div>
         </div>
-        <span className="shrink-0 text-xs text-text-muted font-mono">#{pr.number}</span>
-      </div>
 
-      {/* Bottom row */}
-      <div className="flex items-center gap-2.5 text-[10px] text-text-muted">
-        <span className="flex items-center gap-1">
-          <Clock size={10} />
-          {relativeTime(pr.created_at)}
-        </span>
-        {pr.comments > 0 && (
+        {/* Bottom row */}
+        <div className="flex items-center gap-2.5 text-[10px] text-text-muted">
           <span className="flex items-center gap-1">
-            <MessageSquare size={10} />
-            {pr.comments}
+            <Clock size={10} />
+            {relativeTime(pr.created_at)}
           </span>
-        )}
-        {pr.draft && (
-          <span className="px-1.5 py-0.5 rounded bg-accent-container text-text-muted text-[10px] font-medium">
-            Draft
-          </span>
-        )}
-        {!pr.draft && (
-          <span className="text-accent font-medium">Open</span>
-        )}
-      </div>
-    </button>
+          {pr.comments > 0 && (
+            <span className="flex items-center gap-1">
+              <MessageSquare size={10} />
+              {pr.comments}
+            </span>
+          )}
+          {pr.draft && (
+            <span className="px-1.5 py-0.5 rounded bg-accent-container text-text-muted text-[10px] font-medium">Draft</span>
+          )}
+          {!pr.draft && mergeState === 'clean' && (
+            <span className="text-green-500 font-medium">Ready to merge</span>
+          )}
+          {!pr.draft && mergeState === 'dirty' && (
+            <span className="text-red-400 font-medium">Conflicts</span>
+          )}
+          {!pr.draft && mergeState === 'blocked' && (
+            <span className="text-yellow-500 font-medium">Checks required</span>
+          )}
+          {!pr.draft && mergeState === 'behind' && (
+            <span className="text-yellow-500 font-medium">Branch behind</span>
+          )}
+          {!pr.draft && mergeState === 'unstable' && (
+            <span className="text-yellow-500 font-medium">Checks failing</span>
+          )}
+        </div>
+      </button>
+
+      {/* Merge button — only when ready */}
+      {mergeState === 'clean' && !pr.draft && (
+        <div className="px-3 pb-2.5">
+          {mergeError && (
+            <p className="text-[10px] text-red-400 mb-1">{mergeError}</p>
+          )}
+          <button
+            onClick={handleMerge}
+            disabled={merging}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded text-[11px] font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
+          >
+            {merging
+              ? <><Loader2 size={11} className="animate-spin" /> Merging…</>
+              : <><GitMerge size={11} /> Merge</>
+            }
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -373,7 +479,7 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
         )}
 
         {!loading && !error && currentPRs.map((pr) => (
-          <PRRow key={pr.id} pr={pr} />
+          <PRRow key={pr.id} pr={pr} token={config.token} onMerged={fetchPRs} />
         ))}
       </div>
     </div>
