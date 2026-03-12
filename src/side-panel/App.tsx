@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft } from 'lucide-react';
+import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft, SunMoon } from 'lucide-react';
 import { StorageService } from '../shared/storage/StorageService';
 import type { EnvProfile } from '../shared/types';
 import { ScriptList } from './modules/scripts/ScriptList';
@@ -7,47 +7,31 @@ import { ApiTester } from './modules/api-tester/ApiTester';
 import { DocsList } from './modules/docs/DocsList';
 import { SelfService } from './modules/self-service/SelfService';
 import { UserScriptPanel } from './modules/user-scripts/UserScriptPanel';
+import { useTheme } from '../shared/theme/useTheme';
 
 type Module = 'scripts' | 'api' | 'docs' | 'pr' | 'user-scripts';
 
 interface ModuleDef {
   id: Module;
   label: string;
-  description: string;
-  icon: React.ReactNode;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+function getGreeting(name: string): string {
+  const hour = new Date().getHours();
+  const period =
+    hour >= 5 && hour < 12 ? 'Morning' :
+    hour >= 12 && hour < 17 ? 'Afternoon' :
+    hour >= 17 && hour < 21 ? 'Evening' : 'Night';
+  return name ? `${period}, ${name}` : 'Developer Buddy';
 }
 
 const MODULES: ModuleDef[] = [
-  {
-    id: 'user-scripts',
-    label: 'RPA',
-    description: 'Scripts that run automatically on matching pages',
-    icon: <Code size={20} />,
-  },
-  {
-    id: 'scripts',
-    label: 'Scripts',
-    description: 'Run and manage JS scripts',
-    icon: <Terminal size={20} />,
-  },
-  {
-    id: 'api',
-    label: 'API Tester',
-    description: 'Build and send HTTP requests',
-    icon: <Zap size={20} />,
-  },
-  {
-    id: 'docs',
-    label: 'Docs',
-    description: 'Quick-access documentation',
-    icon: <BookOpen size={20} />,
-  },
-  {
-    id: 'pr',
-    label: 'PR & Actions',
-    description: 'Pull requests and self-service',
-    icon: <GitPullRequest size={20} />,
-  },
+  { id: 'user-scripts', label: 'RPA',          Icon: Code },
+  { id: 'scripts',      label: 'Scripts',      Icon: Terminal },
+  { id: 'api',          label: 'API Tester',   Icon: Zap },
+  { id: 'docs',         label: 'Docs',         Icon: BookOpen },
+  { id: 'pr',           label: 'PR & Actions', Icon: GitPullRequest },
 ];
 
 function EnvBadge({
@@ -65,7 +49,7 @@ function EnvBadge({
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 transition-colors text-white/90"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white/15 text-white border border-white/20 hover:bg-white/25 transition-colors"
       >
         <span className={`w-1.5 h-1.5 rounded-full ${activeProfile ? 'bg-green-400' : 'bg-white/30'}`} />
         {activeProfile ? `ENV: ${activeProfile.name}` : 'No environment'}
@@ -74,16 +58,16 @@ function EnvBadge({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg min-w-44 py-1">
+          <div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-theme-border rounded-card shadow-lg min-w-44 py-1">
             {profiles.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-gray-400">No profiles — add in Settings</div>
+              <div className="px-3 py-2 text-xs text-text-muted">No profiles — add in Settings</div>
             ) : (
               profiles.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { onSwitch(p.id); setOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center gap-2 ${
-                    p.isActive ? 'font-semibold text-brand-600' : 'text-gray-700'
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-accent-container flex items-center gap-2 ${
+                    p.isActive ? 'font-semibold text-accent bg-accent-container' : 'text-text-primary'
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -104,51 +88,45 @@ function HomeScreen({
   onNavigate,
   onSwitchProfile,
   onOpenSettings,
+  toggleTheme,
+  greeting,
 }: {
   activeProfile: EnvProfile | null;
   profiles: EnvProfile[];
   onNavigate: (m: Module) => void;
   onSwitchProfile: (id: string) => void;
   onOpenSettings: () => void;
+  toggleTheme: () => void;
+  greeting: string;
 }) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-brand-900 px-4 pt-4 pb-5">
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-semibold text-white text-base tracking-tight">Developer Buddy</span>
-          <button
-            onClick={onOpenSettings}
-            className="p-1.5 rounded-lg hover:bg-brand-600 text-white/80 hover:text-white transition-colors"
-            title="Settings"
-          >
-            <Settings size={16} />
-          </button>
-        </div>
-        <EnvBadge
-          activeProfile={activeProfile}
-          profiles={profiles}
-          onSwitch={onSwitchProfile}
-        />
+      <div className="bg-header flex items-center gap-2 px-3 py-3 border-b border-theme-border">
+        <span className="text-white font-bold flex-1 text-sm">{greeting}</span>
+        <EnvBadge activeProfile={activeProfile} profiles={profiles} onSwitch={onSwitchProfile} />
+        <button onClick={toggleTheme} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+          <SunMoon size={16} className="text-white/80" />
+        </button>
+        <button onClick={onOpenSettings} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+          <Settings size={16} className="text-white/80" />
+        </button>
       </div>
 
-      {/* Module buttons */}
-      <div className="flex-1 overflow-auto p-3 flex flex-col gap-2">
-        {MODULES.map((mod) => (
-          <button
-            key={mod.id}
-            onClick={() => onNavigate(mod.id)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50 hover:shadow-sm text-left transition-all group"
-          >
-            <span className="text-brand-500 group-hover:text-brand-600 shrink-0">
-              {mod.icon}
-            </span>
-            <div className="min-w-0">
-              <div className="font-medium text-gray-900 text-sm">{mod.label}</div>
-              <div className="text-xs text-gray-400 group-hover:text-gray-500">{mod.description}</div>
-            </div>
-          </button>
-        ))}
+      {/* Module grid */}
+      <div className="flex-1 overflow-auto p-3">
+        <div className="grid grid-cols-2 gap-2">
+          {MODULES.map((mod) => (
+            <button
+              key={mod.id}
+              onClick={() => onNavigate(mod.id)}
+              className="h-[88px] flex flex-col items-center justify-center gap-1.5 bg-surface border border-theme-border rounded-card hover:bg-accent-container hover:border-accent transition-all cursor-pointer"
+            >
+              <mod.Icon size={22} className="text-accent" />
+              <span className="text-xs font-semibold text-text-primary">{mod.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -164,30 +142,26 @@ function ModuleHeader({
   onOpenSettings: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-white shrink-0">
-      <button
-        onClick={onBack}
-        className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
-        title="Back"
-      >
-        <ArrowLeft size={16} />
+    <div className="bg-header flex items-center gap-2 px-3 py-3 border-b border-theme-border shrink-0">
+      <button onClick={onBack} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+        <ArrowLeft size={16} className="text-white/80" />
       </button>
-      <span className="font-semibold text-sm flex-1">{label}</span>
-      <button
-        onClick={onOpenSettings}
-        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-        title="Settings"
-      >
-        <Settings size={14} />
+      <span className="text-white font-semibold flex-1 text-sm">{label}</span>
+      <button onClick={onOpenSettings} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+        <Settings size={16} className="text-white/80" />
       </button>
     </div>
   );
 }
 
 export default function App() {
+  const { toggleTheme } = useTheme();
   const [activeModule, setActiveModule] = useState<Module | null>(null);
+  // Keep the last module rendered so it stays visible during the slide-back animation
+  const [renderedModule, setRenderedModule] = useState<Module | null>(null);
   const [activeProfile, setActiveProfile] = useState<EnvProfile | null>(null);
   const [profiles, setProfiles] = useState<EnvProfile[]>([]);
+  const [userName, setUserName] = useState('');
 
   const loadProfiles = useCallback(async () => {
     const [all, active] = await Promise.all([
@@ -200,6 +174,10 @@ export default function App() {
 
   useEffect(() => {
     loadProfiles();
+    chrome.storage.local.get('developer_buddy_user').then((r) => {
+      const user = r['developer_buddy_user'] as { name?: string } | undefined;
+      if (user?.name) setUserName(user.name);
+    });
   }, [loadProfiles]);
 
   const handleSwitchProfile = async (id: string) => {
@@ -211,33 +189,57 @@ export default function App() {
     chrome.runtime.openOptionsPage();
   };
 
-  const activeModuleDef = MODULES.find((m) => m.id === activeModule);
+  const handleNavigate = (mod: Module) => {
+    setRenderedModule(mod);
+    setActiveModule(mod);
+  };
 
-  if (!activeModule) {
-    return (
-      <HomeScreen
-        activeProfile={activeProfile}
-        profiles={profiles}
-        onNavigate={setActiveModule}
-        onSwitchProfile={handleSwitchProfile}
-        onOpenSettings={handleOpenSettings}
-      />
-    );
-  }
+  const handleBack = () => {
+    setActiveModule(null);
+    // Clear renderedModule after the slide-back animation completes
+    setTimeout(() => setRenderedModule(null), 300);
+  };
+
+  const activeModuleDef = MODULES.find((m) => m.id === (activeModule ?? renderedModule));
 
   return (
-    <div className="flex flex-col h-screen bg-white text-gray-900 text-sm overflow-hidden">
-      <ModuleHeader
-        label={activeModuleDef?.label ?? ''}
-        onBack={() => setActiveModule(null)}
-        onOpenSettings={handleOpenSettings}
-      />
-      <div className="flex-1 overflow-auto p-3">
-        {activeModule === 'scripts'      && <ScriptList />}
-        {activeModule === 'api'          && <ApiTester />}
-        {activeModule === 'docs'         && <DocsList />}
-        {activeModule === 'pr'           && <SelfService />}
-        {activeModule === 'user-scripts' && <UserScriptPanel />}
+    <div className="h-screen overflow-hidden bg-[var(--color-bg-primary)] text-text-primary text-sm">
+      {/* Sliding track: 200% wide, two panels side by side */}
+      <div
+        className="flex h-full transition-transform duration-300 ease-in-out"
+        style={{
+          width: '200%',
+          transform: activeModule ? 'translateX(-50%)' : 'translateX(0)',
+        }}
+      >
+        {/* Panel 1: Home */}
+        <div className="h-full flex flex-col" style={{ width: '50%' }}>
+          <HomeScreen
+            activeProfile={activeProfile}
+            profiles={profiles}
+            onNavigate={handleNavigate}
+            onSwitchProfile={handleSwitchProfile}
+            onOpenSettings={handleOpenSettings}
+            toggleTheme={toggleTheme}
+            greeting={getGreeting(userName)}
+          />
+        </div>
+
+        {/* Panel 2: Module view */}
+        <div className="h-full flex flex-col overflow-hidden" style={{ width: '50%' }}>
+          <ModuleHeader
+            label={activeModuleDef?.label ?? ''}
+            onBack={handleBack}
+            onOpenSettings={handleOpenSettings}
+          />
+          <div className="flex-1 overflow-auto p-3">
+            {renderedModule === 'scripts'      && <ScriptList />}
+            {renderedModule === 'api'          && <ApiTester />}
+            {renderedModule === 'docs'         && <DocsList />}
+            {renderedModule === 'pr'           && <SelfService />}
+            {renderedModule === 'user-scripts' && <UserScriptPanel />}
+          </div>
+        </div>
       </div>
     </div>
   );

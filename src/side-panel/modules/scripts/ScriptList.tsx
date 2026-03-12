@@ -20,7 +20,7 @@ function LanguageBadge({ language }: { language: Script['language'] }) {
     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
       language === 'javascript'
         ? 'bg-yellow-100 text-yellow-700'
-        : 'bg-gray-100 text-gray-600'
+        : 'bg-accent-container text-text-secondary'
     }`}>
       {language === 'javascript' ? 'JS' : 'Shell'}
     </span>
@@ -122,38 +122,38 @@ export function ScriptList() {
         <h2 className="font-semibold text-base">Scripts</h2>
         <button
           onClick={() => setEditing('new')}
-          className="flex items-center gap-1 px-2 py-1 rounded bg-brand-500 text-white text-xs hover:bg-brand-600"
+          className="flex items-center gap-1 px-2 py-1 rounded bg-accent text-[var(--color-bg-primary)] text-xs hover:opacity-90"
         >
           <Plus size={12} /> New
         </button>
       </div>
 
       {scripts.length === 0 && (
-        <div className="text-gray-400 text-sm py-8 text-center">
+        <div className="text-text-muted text-sm py-8 text-center">
           No scripts yet. Click <strong>+ New</strong> to create your first script.
         </div>
       )}
 
       {scripts.map((script) => (
-        <div key={script.id} className="border border-gray-200 rounded-md p-2.5">
+        <div key={script.id} className="border border-theme-border rounded-card p-2.5">
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {script.isPinned && <Pin size={11} className="text-brand-500 shrink-0" />}
+                {script.isPinned && <Pin size={11} className="text-accent shrink-0" />}
                 <span className="font-medium text-sm truncate">{script.name}</span>
                 <LanguageBadge language={script.language} />
               </div>
               {script.description && (
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{script.description}</p>
+                <p className="text-xs text-text-muted mt-0.5 truncate">{script.description}</p>
               )}
               {script.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {script.tags.map((tag) => (
-                    <span key={tag} className="px-1 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{tag}</span>
+                    <span key={tag} className="px-1 py-0.5 bg-accent-container text-text-muted rounded text-xs">{tag}</span>
                   ))}
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-1">Last run: {formatTimestamp(script.lastRunAt)}</p>
+              <p className="text-xs text-text-muted mt-1">Last run: {formatTimestamp(script.lastRunAt)}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
@@ -181,7 +181,7 @@ export function ScriptList() {
                   </button>
                   <button
                     onClick={() => setDeleteConfirm(null)}
-                    className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                    className="px-1.5 py-0.5 text-xs bg-accent-container text-text-secondary rounded hover:bg-gray-200"
                   >
                     Cancel
                   </button>
@@ -203,7 +203,7 @@ export function ScriptList() {
             <div className="mt-2">
               <button
                 onClick={() => toggleOutput(script.id)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary"
               >
                 {expandedOutputs.has(script.id) ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 Output

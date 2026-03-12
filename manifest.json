@@ -38,7 +38,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["offscreen/offscreen.html"],
+      "resources": ["offscreen/offscreen.html", "wizard/wizard.html"],
       "matches": ["<all_urls>"]
     }
   ],

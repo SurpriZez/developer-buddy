@@ -31,21 +31,21 @@ function HeaderRow({
         type="checkbox"
         checked={item.enabled}
         onChange={(e) => onChange({ ...item, enabled: e.target.checked })}
-        className="accent-brand-500 shrink-0"
+        className="accent-[var(--color-accent)] shrink-0"
       />
       <input
         type="text"
         value={item.key}
         onChange={(e) => onChange({ ...item, key: e.target.value })}
         placeholder="Key"
-        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
       <input
         type="text"
         value={item.value}
         onChange={(e) => onChange({ ...item, value: e.target.value })}
         placeholder="Value"
-        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
       <button onClick={onDelete} className="text-gray-300 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
@@ -69,21 +69,21 @@ function ParamRow({
         type="checkbox"
         checked={item.enabled}
         onChange={(e) => onChange({ ...item, enabled: e.target.checked })}
-        className="accent-brand-500 shrink-0"
+        className="accent-[var(--color-accent)] shrink-0"
       />
       <input
         type="text"
         value={item.key}
         onChange={(e) => onChange({ ...item, key: e.target.value })}
         placeholder="Key"
-        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
       <input
         type="text"
         value={item.value}
         onChange={(e) => onChange({ ...item, value: e.target.value })}
         placeholder="Value"
-        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
       <button onClick={onDelete} className="text-gray-300 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
@@ -242,27 +242,27 @@ export function ApiTester() {
       {/* Saved requests toggle */}
       <button
         onClick={() => setSavedPanelOpen((o) => !o)}
-        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium"
+        className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary font-medium"
       >
         {savedPanelOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         Saved Requests ({savedRequests.length})
       </button>
 
       {savedPanelOpen && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden max-h-40 overflow-y-auto">
+        <div className="border border-theme-border rounded-card overflow-hidden max-h-40 overflow-y-auto">
           {savedRequests.length === 0 ? (
-            <p className="text-xs text-gray-400 p-3">No saved requests.</p>
+            <p className="text-xs text-text-muted p-3">No saved requests.</p>
           ) : (
             savedRequests.map((r) => (
               <button
                 key={r.id}
                 onClick={() => loadRequest(r)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-brand-50 border-b border-gray-100 last:border-0"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent-container border-b border-theme-border last:border-0"
               >
                 <span className={`text-xs font-mono font-bold shrink-0 ${methodColors[r.method]}`}>
                   {r.method}
                 </span>
-                <span className="text-xs text-gray-700 truncate">{r.name}</span>
+                <span className="text-xs text-text-secondary truncate">{r.name}</span>
               </button>
             ))
           )}
@@ -274,10 +274,10 @@ export function ApiTester() {
         <select
           value={method}
           onChange={(e) => setMethod(e.target.value as HttpMethod)}
-          className={`border border-gray-200 rounded-lg px-2 py-2 text-xs font-semibold font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white shrink-0 ${methodColors[method]}`}
+          className={`border border-theme-border rounded-card px-2 py-2 text-xs font-semibold font-mono focus:outline-none focus:ring-2 focus:ring-accent bg-surface shrink-0 ${methodColors[method]}`}
         >
           {METHODS.map((m) => (
-            <option key={m} value={m} className="text-gray-900">
+            <option key={m} value={m} className="text-text-primary">
               {m}
             </option>
           ))}
@@ -287,20 +287,20 @@ export function ApiTester() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://api.example.com/endpoint"
-          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="flex-1 min-w-0 border border-theme-border rounded-card px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-accent"
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
         />
         <button
           onClick={handleSend}
           disabled={loading}
-          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 bg-accent text-[var(--color-bg-primary)] rounded-card text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
         >
           <Send size={13} />
           {loading ? 'Sending…' : 'Send'}
         </button>
         <button
           onClick={() => { setShowSaveModal(true); setSaveName(''); }}
-          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 border border-theme-border text-text-secondary rounded-card text-xs font-medium hover:bg-accent-container transition-colors"
           title="Save request"
         >
           <Save size={13} />
@@ -310,15 +310,15 @@ export function ApiTester() {
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-gray-200">
+      <div className="flex gap-0 border-b border-theme-border">
         {(['headers', 'params', 'body'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-1.5 text-xs font-medium capitalize border-b-2 -mb-px transition-colors ${
               tab === t
-                ? 'border-brand-500 text-brand-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-muted hover:text-text-secondary'
             }`}
           >
             {t}
@@ -340,7 +340,7 @@ export function ApiTester() {
             ))}
             <button
               onClick={() => setHeaders((hs) => [...hs, { key: '', value: '', enabled: true }])}
-              className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 mt-1"
+              className="inline-flex items-center gap-1 text-xs text-accent hover:opacity-90 mt-1"
             >
               <Plus size={12} /> Add Header
             </button>
@@ -359,7 +359,7 @@ export function ApiTester() {
             ))}
             <button
               onClick={() => setParams((ps) => [...ps, { key: '', value: '', enabled: true }])}
-              className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 mt-1"
+              className="inline-flex items-center gap-1 text-xs text-accent hover:opacity-90 mt-1"
             >
               <Plus size={12} /> Add Param
             </button>
@@ -371,7 +371,7 @@ export function ApiTester() {
             <select
               value={bodyType}
               onChange={(e) => setBodyType(e.target.value as ApiRequestBodyType)}
-              className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="border border-theme-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
             >
               <option value="none">None</option>
               <option value="json">JSON</option>
@@ -384,7 +384,7 @@ export function ApiTester() {
                 onChange={(e) => setBody(e.target.value)}
                 placeholder={bodyType === 'json' ? '{\n  "key": "value"\n}' : 'Request body...'}
                 rows={5}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
+                className="w-full border border-theme-border rounded-card px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-none"
               />
             )}
           </div>
@@ -393,14 +393,14 @@ export function ApiTester() {
 
       {/* Response */}
       {response && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="border border-theme-border rounded-card overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-primary)] border-b border-theme-border">
             <StatusBadge status={response.status} />
-            <span className="text-xs text-gray-500">{response.statusText}</span>
-            <span className="text-xs text-gray-400 ml-auto">{response.durationMs}ms</span>
+            <span className="text-xs text-text-muted">{response.statusText}</span>
+            <span className="text-xs text-text-muted ml-auto">{response.durationMs}ms</span>
             <button
               onClick={copyBody}
-              className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 ml-1"
+              className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary ml-1"
               title="Copy body"
             >
               <Copy size={12} />
@@ -409,10 +409,10 @@ export function ApiTester() {
           </div>
 
           {/* Response headers collapsible */}
-          <div className="border-b border-gray-200">
+          <div className="border-b border-theme-border">
             <button
               onClick={() => setResponseHeadersOpen((o) => !o)}
-              className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+              className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-text-muted hover:bg-accent-container"
             >
               {responseHeadersOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               Response Headers ({Object.keys(response.headers).length})
@@ -421,16 +421,16 @@ export function ApiTester() {
               <div className="px-3 pb-2 space-y-0.5 max-h-32 overflow-y-auto">
                 {Object.entries(response.headers).map(([k, v]) => (
                   <div key={k} className="flex gap-2 text-xs font-mono">
-                    <span className="text-gray-500 shrink-0">{k}:</span>
-                    <span className="text-gray-700 break-all">{v}</span>
+                    <span className="text-text-muted shrink-0">{k}:</span>
+                    <span className="text-text-secondary break-all">{v}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <pre className="p-3 text-xs font-mono text-gray-800 overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all">
-            {prettyJson(response.body) || <span className="text-gray-400">(empty body)</span>}
+          <pre className="p-3 text-xs font-mono text-text-primary overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all">
+            {prettyJson(response.body) || <span className="text-text-muted">(empty body)</span>}
           </pre>
         </div>
       )}
@@ -438,11 +438,11 @@ export function ApiTester() {
       {/* Save modal */}
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-5 w-72 space-y-3">
+          <div className="bg-surface rounded-card shadow-xl p-5 w-72 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-gray-900">Save Request</h3>
+              <h3 className="font-semibold text-sm text-text-primary">Save Request</h3>
               <button onClick={() => setShowSaveModal(false)}>
-                <X size={16} className="text-gray-400 hover:text-gray-600" />
+                <X size={16} className="text-text-muted hover:text-text-secondary" />
               </button>
             </div>
             <input
@@ -451,12 +451,12 @@ export function ApiTester() {
               onChange={(e) => setSaveName(e.target.value)}
               placeholder="Request name"
               autoFocus
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full border border-theme-border rounded-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <select
               value={saveCollectionId ?? ''}
               onChange={(e) => setSaveCollectionId(e.target.value || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full border border-theme-border rounded-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
             >
               <option value="">No collection</option>
               {collections.map((c) => (
@@ -467,13 +467,13 @@ export function ApiTester() {
               <button
                 onClick={handleSave}
                 disabled={!saveName.trim()}
-                className="flex-1 px-3 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                className="flex-1 px-3 py-2 bg-accent text-[var(--color-bg-primary)] rounded-card text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 Save
               </button>
               <button
                 onClick={() => setShowSaveModal(false)}
-                className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 px-3 py-2 bg-accent-container text-text-secondary rounded-card text-sm font-medium hover:bg-accent-container transition-colors"
               >
                 Cancel
               </button>

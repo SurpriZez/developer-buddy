@@ -43,9 +43,9 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
       {error && <p className="text-red-500 text-xs">{error}</p>}
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1">Name *</label>
         <input
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+          className="w-full border border-theme-border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Flush Redis Cache"
@@ -53,9 +53,9 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1">Description</label>
         <textarea
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500 resize-none"
+          className="w-full border border-theme-border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent resize-none"
           rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -65,9 +65,9 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
 
       <div className="flex gap-3">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Language</label>
+          <label className="block text-xs font-medium text-text-secondary mb-1">Language</label>
           <select
-            className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+            className="w-full border border-theme-border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent"
             value={language}
             onChange={(e) => setLanguage(e.target.value as ScriptLanguage)}
           >
@@ -76,12 +76,12 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
           </select>
         </div>
         <div className="flex items-end pb-1">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-text-secondary cursor-pointer">
             <input
               type="checkbox"
               checked={isPinned}
               onChange={(e) => setIsPinned(e.target.checked)}
-              className="accent-brand-500"
+              className="accent-[var(--color-accent)]"
             />
             Pin
           </label>
@@ -89,9 +89,9 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Tags (comma-separated)</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1">Tags (comma-separated)</label>
         <input
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-500"
+          className="w-full border border-theme-border rounded px-2 py-1 text-sm focus:outline-none focus:border-accent"
           value={tags}
           onChange={(e) => setTags(e.target.value)}
           placeholder="e.g. redis, cache, local"
@@ -99,9 +99,9 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Body</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1">Body</label>
         <textarea
-          className="w-full border border-gray-200 rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-brand-500 resize-y"
+          className="w-full border border-theme-border rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-accent resize-y"
           rows={10}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -113,13 +113,13 @@ export function ScriptEditor({ initial, onSave, onCancel }: Props) {
       <div className="flex gap-2 justify-end">
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-600 hover:bg-gray-50"
+          className="px-3 py-1.5 text-sm rounded border border-theme-border text-text-secondary hover:bg-accent-container"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="px-3 py-1.5 text-sm rounded bg-brand-500 text-white hover:bg-brand-600"
+          className="px-3 py-1.5 text-sm rounded bg-accent text-[var(--color-bg-primary)] hover:opacity-90"
         >
           Save
         </button>

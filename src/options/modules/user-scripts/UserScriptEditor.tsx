@@ -35,6 +35,7 @@ const ALL_GRANTS = Object.keys(GRANT_DESCRIPTIONS) as UserScriptGrant[];
 
 interface Props {
   script: UserScript | null;
+  initialBody?: string;
   onSave: (script: UserScript) => void;
   onCancel: () => void;
 }
@@ -42,13 +43,13 @@ interface Props {
 function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-theme-border rounded-card overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--color-bg-primary)] hover:bg-accent-container transition-colors text-left"
       >
-        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{title}</span>
-        {open ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">{title}</span>
+        {open ? <ChevronUp size={14} className="text-text-muted" /> : <ChevronDown size={14} className="text-text-muted" />}
       </button>
       {open && <div className="px-4 py-3">{children}</div>}
     </div>
@@ -65,11 +66,11 @@ function Tip({ children }: { children: React.ReactNode }) {
 }
 
 function Code({ children }: { children: React.ReactNode }) {
-  return <code className="bg-gray-100 text-gray-800 font-mono px-1 py-0.5 rounded text-xs">{children}</code>;
+  return <code className="bg-accent-container text-text-primary font-mono px-1 py-0.5 rounded text-xs">{children}</code>;
 }
 
-export function UserScriptEditor({ script, onSave, onCancel }: Props) {
-  const [body, setBody] = useState(script?.body ?? STARTER_TEMPLATE);
+export function UserScriptEditor({ script, initialBody, onSave, onCancel }: Props) {
+  const [body, setBody] = useState(script?.body ?? initialBody ?? STARTER_TEMPLATE);
   const [error, setError] = useState('');
 
   const parsed = parseUserScript(body);
@@ -99,14 +100,14 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">
+        <h2 className="text-base font-semibold text-text-primary">
           {script ? 'Edit RPA Script' : 'New RPA Script'}
         </h2>
       </div>
 
       {/* What is an RPA script? */}
       <Section title="What is an RPA Script?">
-        <div className="space-y-2 text-xs text-gray-600 leading-relaxed">
+        <div className="space-y-2 text-xs text-text-secondary leading-relaxed">
           <p>
             RPA scripts are JavaScript snippets that <strong>automatically run on web pages</strong> that match your
             configured URL patterns — similar to Tampermonkey or Greasemonkey.
@@ -125,15 +126,15 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
 
       {/* Metadata header reference */}
       <Section title="Metadata Header Reference">
-        <div className="space-y-3 text-xs text-gray-600">
+        <div className="space-y-3 text-xs text-text-secondary">
           <p>Every RPA script starts with a <Code>{'==UserScript=='}</Code> header block that controls how it runs.</p>
 
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700 w-36">Tag</th>
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700">Description</th>
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700 w-28">Example</th>
+              <tr className="bg-[var(--color-bg-primary)] text-left">
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary w-36">Tag</th>
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary">Description</th>
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary w-28">Example</th>
               </tr>
             </thead>
             <tbody className="font-mono">
@@ -147,9 +148,9 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
                 ['@grant', 'Developer Buddy API to expose (repeatable, or "none")', 'DB_setClipboard'],
               ].map(([tag, desc, example]) => (
                 <tr key={tag} className="align-top">
-                  <td className="border border-gray-200 px-2 py-1.5 text-brand-700 font-semibold">{tag}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 font-sans text-gray-600">{desc}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-gray-500">{example}</td>
+                  <td className="border border-theme-border px-2 py-1.5 text-accent font-semibold">{tag}</td>
+                  <td className="border border-theme-border px-2 py-1.5 font-sans text-text-secondary">{desc}</td>
+                  <td className="border border-theme-border px-2 py-1.5 text-text-muted">{example}</td>
                 </tr>
               ))}
             </tbody>
@@ -161,11 +162,11 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
           </Tip>
 
           <div>
-            <p className="font-medium text-gray-700 mb-1">run-at values explained:</p>
+            <p className="font-medium text-text-secondary mb-1">run-at values explained:</p>
             <ul className="space-y-1 pl-3">
               <li><Code>document-start</Code> — runs before the DOM is built (fastest, but DOM not ready)</li>
               <li><Code>document-end</Code> — runs after the DOM is parsed but before images load</li>
-              <li><Code>document-idle</Code> — runs after the page fully loads <span className="text-gray-400">(default, safest)</span></li>
+              <li><Code>document-idle</Code> — runs after the page fully loads <span className="text-text-muted">(default, safest)</span></li>
             </ul>
           </div>
         </div>
@@ -173,7 +174,7 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
 
       {/* Grant reference */}
       <Section title="Available Grants (window.DB API)" defaultOpen={false}>
-        <div className="space-y-3 text-xs text-gray-600">
+        <div className="space-y-3 text-xs text-text-secondary">
           <p>
             Declare grants with <Code>@grant DB_grantName</Code> in the header. Only declared grants are
             available at runtime via the <Code>window.DB</Code> object. Use <Code>@grant none</Code> if your
@@ -181,18 +182,18 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
           </p>
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700 w-40">Grant</th>
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700">What it gives you</th>
-                <th className="border border-gray-200 px-2 py-1.5 font-semibold text-gray-700 w-44">Usage</th>
+              <tr className="bg-[var(--color-bg-primary)] text-left">
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary w-40">Grant</th>
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary">What it gives you</th>
+                <th className="border border-theme-border px-2 py-1.5 font-semibold text-text-secondary w-44">Usage</th>
               </tr>
             </thead>
             <tbody className="font-mono">
               {ALL_GRANTS.map((g) => (
                 <tr key={g} className="align-top">
-                  <td className="border border-gray-200 px-2 py-1.5 text-brand-700 font-semibold">{g}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 font-sans text-gray-600">{GRANT_DESCRIPTIONS[g]}</td>
-                  <td className="border border-gray-200 px-2 py-1.5 text-gray-500">
+                  <td className="border border-theme-border px-2 py-1.5 text-accent font-semibold">{g}</td>
+                  <td className="border border-theme-border px-2 py-1.5 font-sans text-text-secondary">{GRANT_DESCRIPTIONS[g]}</td>
+                  <td className="border border-theme-border px-2 py-1.5 text-text-muted">
                     {g === 'DB_setValue'      && 'DB.setValue("key", val)'}
                     {g === 'DB_getValue'      && 'DB.getValue("key")'}
                     {g === 'DB_deleteValue'   && 'DB.deleteValue("key")'}
@@ -217,47 +218,47 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
       {/* Editor + live preview side by side */}
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Script</label>
+          <label className="block text-xs font-semibold text-text-secondary mb-1.5">Script</label>
           <textarea
             value={body}
             onChange={(e) => { setBody(e.target.value); setError(''); }}
             rows={22}
             spellCheck={false}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y bg-gray-900 text-green-400 leading-relaxed"
+            className="w-full border border-theme-border rounded-card px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-accent resize-y bg-gray-900 text-green-400 leading-relaxed"
           />
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
 
         {/* Live metadata preview */}
         <div className="w-56 shrink-0 space-y-3">
-          <p className="text-xs font-semibold text-gray-700">Live Preview</p>
+          <p className="text-xs font-semibold text-text-secondary">Live Preview</p>
 
-          <div className="border border-gray-200 rounded-lg p-3 space-y-3 text-xs">
+          <div className="border border-theme-border rounded-card p-3 space-y-3 text-xs">
             <div>
-              <p className="text-gray-400 mb-0.5">Name</p>
-              <p className="font-medium text-gray-900 break-words">
-                {parsed.name ?? <span className="text-gray-300 italic">not set</span>}
+              <p className="text-text-muted mb-0.5">Name</p>
+              <p className="font-medium text-text-primary break-words">
+                {parsed.name ?? <span className="text-text-muted italic">not set</span>}
               </p>
             </div>
 
             <div>
-              <p className="text-gray-400 mb-0.5">Version</p>
-              <p className="font-mono text-gray-700">{parsed.version ?? <span className="text-gray-300 italic">not set</span>}</p>
+              <p className="text-text-muted mb-0.5">Version</p>
+              <p className="font-mono text-text-secondary">{parsed.version ?? <span className="text-text-muted italic">not set</span>}</p>
             </div>
 
             <div>
-              <p className="text-gray-400 mb-0.5">Run at</p>
-              <p className="font-mono text-gray-700">{parsed.runAt ?? 'document-idle'}</p>
+              <p className="text-text-muted mb-0.5">Run at</p>
+              <p className="font-mono text-text-secondary">{parsed.runAt ?? 'document-idle'}</p>
             </div>
 
             <div>
-              <p className="text-gray-400 mb-0.5">Match Patterns</p>
+              <p className="text-text-muted mb-0.5">Match Patterns</p>
               {(!parsed.matchPatterns || parsed.matchPatterns.length === 0) ? (
                 <p className="text-red-400 italic">none — required</p>
               ) : (
                 <ul className="space-y-1 mt-1">
                   {parsed.matchPatterns.map((p, i) => (
-                    <li key={i} className="font-mono text-gray-700 break-all bg-gray-100 rounded px-1.5 py-0.5 text-xs">
+                    <li key={i} className="font-mono text-text-secondary break-all bg-accent-container rounded px-1.5 py-0.5 text-xs">
                       {p}
                     </li>
                   ))}
@@ -266,13 +267,13 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
             </div>
 
             <div>
-              <p className="text-gray-400 mb-0.5">Grants</p>
+              <p className="text-text-muted mb-0.5">Grants</p>
               {(!parsed.grants || parsed.grants.length === 0) ? (
-                <p className="text-gray-300 italic">none</p>
+                <p className="text-text-muted italic">none</p>
               ) : (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {parsed.grants.map((g) => (
-                    <span key={g} className="bg-brand-50 text-brand-700 border border-brand-200 px-1.5 py-0.5 rounded font-mono text-xs">
+                    <span key={g} className="bg-accent-container text-accent border border-accent px-1.5 py-0.5 rounded font-mono text-xs">
                       {g}
                     </span>
                   ))}
@@ -286,13 +287,13 @@ export function UserScriptEditor({ script, onSave, onCancel }: Props) {
       <div className="flex gap-2">
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          className="px-4 py-2 bg-accent text-[var(--color-bg-primary)] rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
         >
           Save Script
         </button>
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          className="px-4 py-2 bg-accent-container text-text-secondary rounded-lg text-sm font-medium hover:bg-accent-container transition-colors"
         >
           Cancel
         </button>

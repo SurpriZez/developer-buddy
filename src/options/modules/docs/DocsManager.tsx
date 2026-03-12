@@ -76,11 +76,11 @@ export function DocsManager() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Documentation Sources</h2>
+        <h2 className="text-base font-semibold text-text-primary">Documentation Sources</h2>
         {!showForm && (
           <button
             onClick={() => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(true); setError(''); }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent text-[var(--color-bg-primary)] rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
           >
             <Plus size={14} />
             Add Source
@@ -89,29 +89,29 @@ export function DocsManager() {
       </div>
 
       {showForm && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">
+        <div className="border border-theme-border rounded-card p-4 bg-[var(--color-bg-primary)] space-y-3">
+          <h3 className="text-sm font-semibold text-text-secondary">
             {editingId ? 'Edit Source' : 'New Source'}
           </h3>
           <div className="space-y-2">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Name</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setError(''); }}
                 placeholder="MDN Web Docs"
-                className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full max-w-sm border border-theme-border rounded-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">URL (https://)</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1">URL (https://)</label>
               <input
                 type="url"
                 value={form.url}
                 onChange={(e) => { setForm((f) => ({ ...f, url: e.target.value })); setError(''); }}
                 placeholder="https://developer.mozilla.org"
-                className="w-full max-w-sm border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full max-w-sm border border-theme-border rounded-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
@@ -119,9 +119,9 @@ export function DocsManager() {
                 type="checkbox"
                 checked={form.isPinned}
                 onChange={(e) => setForm((f) => ({ ...f, isPinned: e.target.checked }))}
-                className="accent-brand-500"
+                className="accent-[var(--color-accent)]"
               />
-              <Pin size={13} className="text-brand-500" />
+              <Pin size={13} className="text-accent" />
               Pin this source
             </label>
           </div>
@@ -129,13 +129,13 @@ export function DocsManager() {
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-1 px-3 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-2 bg-accent text-[var(--color-bg-primary)] rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
             >
               <Check size={13} /> Save
             </button>
             <button
               onClick={cancelEdit}
-              className="inline-flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-2 bg-accent-container text-text-secondary rounded-lg text-sm font-medium hover:bg-accent-container transition-colors"
             >
               <X size={13} /> Cancel
             </button>
@@ -144,7 +144,7 @@ export function DocsManager() {
       )}
 
       {sources.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-8">
+        <p className="text-sm text-text-muted text-center py-8">
           No documentation sources yet.
         </p>
       ) : (
@@ -158,21 +158,21 @@ export function DocsManager() {
             .map((s) => (
               <div
                 key={s.id}
-                className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg bg-white"
+                className="flex items-center gap-3 px-4 py-3 border border-theme-border rounded-card bg-surface"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-gray-900">{s.name}</span>
+                    <span className="text-sm font-medium text-text-primary">{s.name}</span>
                     {s.isPinned && (
-                      <Pin size={12} className="text-brand-500 shrink-0" />
+                      <Pin size={12} className="text-accent shrink-0" />
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{s.url}</p>
+                  <p className="text-xs text-text-muted truncate mt-0.5">{s.url}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => startEdit(s)}
-                    className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-accent-container rounded transition-colors"
                     title="Edit"
                   >
                     <Pencil size={14} />

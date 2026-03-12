@@ -95,15 +95,15 @@ export function ImportExport() {
 
   return (
     <div className="space-y-8 max-w-lg">
-      <h2 className="text-base font-semibold text-gray-900">Import / Export</h2>
+      <h2 className="text-base font-semibold text-text-primary">Import / Export</h2>
 
       {/* Export */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-3">
+      <div className="border border-theme-border rounded-card p-5 bg-surface space-y-3">
         <div className="flex items-center gap-2">
-          <Download size={16} className="text-brand-500" />
-          <h3 className="font-semibold text-sm text-gray-900">Export Data</h3>
+          <Download size={16} className="text-accent" />
+          <h3 className="font-semibold text-sm text-text-primary">Export Data</h3>
         </div>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-text-muted leading-relaxed">
           Download all your scripts, profiles, requests, and settings as a JSON
           file.
         </p>
@@ -115,7 +115,7 @@ export function ImportExport() {
         </div>
         <button
           onClick={handleExport}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-[var(--color-bg-primary)] rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
         >
           <Download size={14} />
           Export Backup
@@ -123,12 +123,12 @@ export function ImportExport() {
       </div>
 
       {/* Import */}
-      <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-3">
+      <div className="border border-theme-border rounded-card p-5 bg-surface space-y-3">
         <div className="flex items-center gap-2">
-          <Upload size={16} className="text-brand-500" />
-          <h3 className="font-semibold text-sm text-gray-900">Import Data</h3>
+          <Upload size={16} className="text-accent" />
+          <h3 className="font-semibold text-sm text-text-primary">Import Data</h3>
         </div>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-text-muted leading-relaxed">
           Restore from a Developer Buddy backup file (.json). This will replace all
           existing data.
         </p>
@@ -142,7 +142,7 @@ export function ImportExport() {
         />
         <button
           onClick={() => { setImportError(''); setImportSuccess(false); fileInputRef.current?.click(); }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 border border-theme-border text-text-secondary rounded-lg text-sm font-medium hover:bg-accent-container transition-colors"
         >
           <Upload size={14} />
           Choose Backup File
@@ -166,12 +166,12 @@ export function ImportExport() {
       {/* Confirm dialog */}
       {confirmPending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-80 space-y-4">
+          <div className="bg-surface rounded-card shadow-xl p-6 w-80 space-y-4">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-yellow-500" />
-              <h3 className="font-semibold text-sm text-gray-900">Replace All Data?</h3>
+              <h3 className="font-semibold text-sm text-text-primary">Replace All Data?</h3>
             </div>
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               This will replace all existing data with the contents of the backup
               file. This action cannot be undone.
             </p>
@@ -184,7 +184,7 @@ export function ImportExport() {
               </button>
               <button
                 onClick={() => setConfirmPending(null)}
-                className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 px-3 py-2 bg-accent-container text-text-secondary rounded-lg text-sm font-medium hover:bg-accent-container transition-colors"
               >
                 Cancel
               </button>

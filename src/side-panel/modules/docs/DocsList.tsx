@@ -48,11 +48,11 @@ export function DocsList() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search docs…"
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="flex-1 border border-theme-border rounded-card px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
         />
         <button
           onClick={() => chrome.runtime.openOptionsPage()}
-          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-2 border border-theme-border text-text-secondary rounded-card text-xs font-medium hover:bg-accent-container transition-colors"
           title="Add source in settings"
         >
           <Plus size={13} />
@@ -61,13 +61,13 @@ export function DocsList() {
       </div>
 
       {filtered.length === 0 && sources.length === 0 && (
-        <div className="text-center py-10 text-gray-400 space-y-2">
-          <BookOpen size={28} className="mx-auto text-gray-300" />
+        <div className="text-center py-10 text-text-muted space-y-2">
+          <BookOpen size={28} className="mx-auto text-text-muted" />
           <p className="text-sm">No documentation sources yet.</p>
           <p className="text-xs">Add sources in Settings to get started.</p>
           <button
             onClick={() => chrome.runtime.openOptionsPage()}
-            className="mt-1 text-xs text-brand-600 hover:underline"
+            className="mt-1 text-xs text-accent hover:underline"
           >
             Open Settings →
           </button>
@@ -75,7 +75,7 @@ export function DocsList() {
       )}
 
       {filtered.length === 0 && sources.length > 0 && (
-        <p className="text-xs text-gray-400 text-center py-6">
+        <p className="text-xs text-text-muted text-center py-6">
           No results for "{search}"
         </p>
       )}
@@ -84,24 +84,24 @@ export function DocsList() {
         {filtered.map((s) => (
           <div
             key={s.id}
-            className="flex items-start gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors"
+            className="flex items-start gap-2 px-3 py-2.5 border border-theme-border rounded-card bg-surface hover:border-accent transition-colors"
           >
-            <BookOpen size={15} className="text-brand-400 mt-0.5 shrink-0" />
+            <BookOpen size={15} className="text-accent mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-gray-900 truncate">
+                <span className="text-sm font-medium text-text-primary truncate">
                   {s.name}
                 </span>
                 {s.isPinned && (
-                  <Pin size={11} className="text-brand-500 shrink-0" />
+                  <Pin size={11} className="text-accent shrink-0" />
                 )}
               </div>
-              <p className="text-xs text-gray-400 truncate mt-0.5">{s.url}</p>
+              <p className="text-xs text-text-muted truncate mt-0.5">{s.url}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleOpen(s.url)}
-                className="p-1.5 text-brand-500 hover:bg-brand-50 rounded transition-colors"
+                className="p-1.5 text-accent hover:bg-accent-container rounded transition-colors"
                 title="Open"
               >
                 <ExternalLink size={13} />

@@ -11,6 +11,7 @@ module.exports = {
     'options/index': './src/options/index.tsx',
     'background/service-worker': './src/background/service-worker.ts',
     'offscreen/offscreen': './src/offscreen/offscreen.ts',
+    'wizard/index': './src/wizard/index.tsx',
     'content-scripts/user-script-runner': './src/content-scripts/user-script-runner.ts',
     'content-scripts/grant-bridge': './src/content-scripts/grant-bridge.ts',
     'content-scripts/env-bridge': './src/content-scripts/env-bridge.ts',
@@ -73,6 +74,11 @@ module.exports = {
       template: './src/offscreen/offscreen.html',
       filename: 'offscreen/offscreen.html',
       chunks: ['offscreen/offscreen'],
+    }),
+    new HtmlWebpackPlugin({
+      template: './src/wizard/wizard.html',
+      filename: 'wizard/wizard.html',
+      chunks: ['wizard/index'],
     }),
     new CopyWebpackPlugin({
       patterns: [
