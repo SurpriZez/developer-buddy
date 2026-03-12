@@ -47,7 +47,7 @@ function HeaderRow({
         placeholder="Value"
         className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
-      <button onClick={onDelete} className="text-gray-300 hover:text-red-500 shrink-0">
+      <button onClick={onDelete} className="text-text-muted hover:text-red-400 shrink-0">
         <Trash2 size={13} />
       </button>
     </div>
@@ -85,7 +85,7 @@ function ParamRow({
         placeholder="Value"
         className="flex-1 border border-theme-border rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent"
       />
-      <button onClick={onDelete} className="text-gray-300 hover:text-red-500 shrink-0">
+      <button onClick={onDelete} className="text-text-muted hover:text-red-400 shrink-0">
         <Trash2 size={13} />
       </button>
     </div>
@@ -95,10 +95,10 @@ function ParamRow({
 function StatusBadge({ status }: { status: number }) {
   const color =
     status >= 200 && status < 300
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-accent-container text-accent'
       : status >= 300 && status < 400
-      ? 'bg-yellow-100 text-yellow-700'
-      : 'bg-red-100 text-red-700';
+      ? 'bg-accent-container text-text-secondary'
+      : 'bg-accent-container text-red-400';
 
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold font-mono ${color}`}>

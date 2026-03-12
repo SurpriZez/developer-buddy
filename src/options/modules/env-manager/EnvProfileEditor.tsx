@@ -151,7 +151,7 @@ export function EnvProfileEditor({ profile, onSave, onCancel }: Props) {
                     <td className="px-3 py-2 text-center">
                       <button
                         onClick={() => deleteVariable(i)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        className="text-text-muted hover:text-red-400 transition-colors"
                         title="Delete variable"
                       >
                         <Trash2 size={14} />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { SunMoon } from 'lucide-react';
 import { useTheme } from '../shared/theme/useTheme';
 import { EnvManager } from './modules/env-manager/EnvManager';
@@ -19,6 +19,16 @@ const NAV: { id: Section; label: string }[] = [
 export default function App() {
   const { toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState<Section>('env');
+  // Increments on each nav change to remount the content wrapper and re-trigger the animation
+  const animKey = useRef(0);
+  const [, forceUpdate] = useState(0);
+
+  const handleNavClick = (id: Section) => {
+    if (id === activeSection) return;
+    animKey.current += 1;
+    setActiveSection(id);
+    forceUpdate((n) => n + 1);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-bg-primary)] text-text-primary text-sm">
@@ -28,13 +38,13 @@ export default function App() {
         <button onClick={toggleTheme} className="ml-auto w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"><SunMoon size={16} className="text-white/80" /></button>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <nav className="w-52 shrink-0 bg-surface border-r border-theme-border pt-4">
           {NAV.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => handleNavClick(item.id)}
               className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                 activeSection === item.id
                   ? 'bg-accent-container text-accent font-medium border-r-2 border-accent'
@@ -46,19 +56,25 @@ export default function App() {
           ))}
         </nav>
 
-        {/* Content */}
-        <main className="flex-1 p-8 bg-[var(--color-bg-primary)]">
-          {activeSection === 'env'           && <EnvManager />}
-          {activeSection === 'user-scripts'  && <UserScriptList />}
-          {activeSection === 'docs'          && <DocsManager />}
-          {activeSection === 'import-export' && <ImportExport />}
-          {activeSection === 'about'         && (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Developer Buddy</h2>
-              <p className="text-text-muted">Version 0.1.0 — Phase 1 MVP</p>
-              <p className="text-text-muted mt-1">Your browser-native developer portal.</p>
-            </div>
-          )}
+        {/* Content — overflow-hidden clips the slide-in animation */}
+        <main className="flex-1 overflow-hidden bg-[var(--color-bg-primary)]">
+          <div
+            key={animKey.current}
+            className="h-full overflow-auto p-8"
+            style={{ animation: 'slide-in-from-right 300ms ease-in-out' }}
+          >
+            {activeSection === 'env'           && <EnvManager />}
+            {activeSection === 'user-scripts'  && <UserScriptList />}
+            {activeSection === 'docs'          && <DocsManager />}
+            {activeSection === 'import-export' && <ImportExport />}
+            {activeSection === 'about'         && (
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Developer Buddy</h2>
+                <p className="text-text-muted">Version 0.1.0 — Phase 1 MVP</p>
+                <p className="text-text-muted mt-1">Your browser-native developer portal.</p>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>
