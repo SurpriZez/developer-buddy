@@ -6,6 +6,8 @@ import type {
   ApiCollection,
   DocSource,
   UserScript,
+  SelfServiceAction,
+  ActionVariable,
 } from '../types';
 
 const STORAGE_KEY = 'developer_buddy_data';
@@ -17,6 +19,8 @@ const DEFAULTS: StorageSchema = {
   apiCollections: [],
   docSources: [],
   userScripts: [],
+  selfServiceActions: [],
+  actionVariables: [],
 };
 
 export class StorageService {
@@ -30,6 +34,8 @@ export class StorageService {
         apiCollections: [],
         docSources: [],
         userScripts: [],
+        selfServiceActions: [],
+        actionVariables: [],
       };
     }
     return { ...DEFAULTS, ...result[STORAGE_KEY] };

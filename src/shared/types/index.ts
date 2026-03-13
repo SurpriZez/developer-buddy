@@ -108,6 +108,26 @@ export interface UserScript {
   updatedAt: string;
 }
 
+// --- Self-Service Actions ---
+
+export interface ActionVariable {
+  key: string;
+  value: string;
+  secret: boolean;
+}
+
+export interface SelfServiceAction {
+  id: string;
+  name: string;
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: string;               // supports {{VAR_NAME}} interpolation
+  headers: { key: string; value: string; enabled: boolean }[];
+  body: string;              // empty string = no body; used for POST/PUT/PATCH only
+  confirmationPrompt: string; // empty string = no confirmation required
+  createdAt: string;         // ISO8601
+  updatedAt: string;         // ISO8601
+}
+
 // --- Root Storage Schema ---
 export interface StorageSchema {
   scripts: Script[];
@@ -116,4 +136,6 @@ export interface StorageSchema {
   apiCollections: ApiCollection[];
   docSources: DocSource[];
   userScripts: UserScript[];
+  selfServiceActions: SelfServiceAction[];
+  actionVariables: ActionVariable[];
 }
