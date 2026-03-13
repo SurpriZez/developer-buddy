@@ -192,6 +192,9 @@ export function ActionsPanel() {
     ]).then(([acts, vars]) => {
       setActions(acts);
       setVariables(vars);
+    }).catch(() => {
+      // Storage unavailable — show empty state rather than infinite spinner
+    }).finally(() => {
       setLoaded(true);
     });
   }, []);
