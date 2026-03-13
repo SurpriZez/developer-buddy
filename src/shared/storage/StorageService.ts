@@ -203,6 +203,43 @@ export class StorageService {
     await StorageService.writeAll(data);
   }
 
+  // --- Self-Service Actions ---
+
+  static async getSelfServiceActions(): Promise<SelfServiceAction[]> {
+    const data = await StorageService.readAll();
+    return data.selfServiceActions;
+  }
+
+  static async saveSelfServiceAction(action: SelfServiceAction): Promise<void> {
+    const data = await StorageService.readAll();
+    const idx = data.selfServiceActions.findIndex((a) => a.id === action.id);
+    if (idx >= 0) {
+      data.selfServiceActions[idx] = action;
+    } else {
+      data.selfServiceActions.push(action);
+    }
+    await StorageService.writeAll(data);
+  }
+
+  static async deleteSelfServiceAction(id: string): Promise<void> {
+    const data = await StorageService.readAll();
+    data.selfServiceActions = data.selfServiceActions.filter((a) => a.id !== id);
+    await StorageService.writeAll(data);
+  }
+
+  // --- Action Variables ---
+
+  static async getActionVariables(): Promise<ActionVariable[]> {
+    const data = await StorageService.readAll();
+    return data.actionVariables;
+  }
+
+  static async saveActionVariables(variables: ActionVariable[]): Promise<void> {
+    const data = await StorageService.readAll();
+    data.actionVariables = variables;
+    await StorageService.writeAll(data);
+  }
+
   // --- Full export / import ---
 
   static async exportAll(): Promise<StorageSchema> {
