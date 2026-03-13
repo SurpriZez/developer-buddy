@@ -4,14 +4,16 @@ import { useTheme } from '../shared/theme/useTheme';
 import { EnvManager } from './modules/env-manager/EnvManager';
 import { UserScriptList } from './modules/user-scripts/UserScriptList';
 import { DocsManager } from './modules/docs/DocsManager';
+import { ActionsManager } from './modules/actions/ActionsManager';
 import { ImportExport } from './modules/import-export/ImportExport';
 
-type Section = 'env' | 'user-scripts' | 'docs' | 'import-export' | 'about';
+type Section = 'env' | 'user-scripts' | 'docs' | 'actions' | 'import-export' | 'about';
 
 const NAV: { id: Section; label: string }[] = [
   { id: 'env',           label: 'Environment Profiles' },
   { id: 'user-scripts',  label: 'User Scripts' },
   { id: 'docs',          label: 'Documentation' },
+  { id: 'actions',       label: 'Actions' },
   { id: 'import-export', label: 'Import / Export' },
   { id: 'about',         label: 'About' },
 ];
@@ -66,6 +68,7 @@ export default function App() {
             {activeSection === 'env'           && <EnvManager />}
             {activeSection === 'user-scripts'  && <UserScriptList />}
             {activeSection === 'docs'          && <DocsManager />}
+            {activeSection === 'actions'       && <ActionsManager />}
             {activeSection === 'import-export' && <ImportExport />}
             {activeSection === 'about'         && (
               <div>
