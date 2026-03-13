@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft, SunMoon } from 'lucide-react';
+import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft, SunMoon, Play } from 'lucide-react';
 import { StorageService } from '../shared/storage/StorageService';
 import type { EnvProfile } from '../shared/types';
 import { ScriptList } from './modules/scripts/ScriptList';
@@ -7,9 +7,10 @@ import { ApiTester } from './modules/api-tester/ApiTester';
 import { DocsList } from './modules/docs/DocsList';
 import { SelfService } from './modules/self-service/SelfService';
 import { UserScriptPanel } from './modules/user-scripts/UserScriptPanel';
+import { ActionsPanel } from './modules/actions/ActionsPanel';
 import { useTheme } from '../shared/theme/useTheme';
 
-type Module = 'scripts' | 'api' | 'docs' | 'pr' | 'user-scripts';
+type Module = 'scripts' | 'api' | 'docs' | 'pr' | 'user-scripts' | 'actions';
 
 interface ModuleDef {
   id: Module;
@@ -32,6 +33,7 @@ const MODULES: ModuleDef[] = [
   { id: 'api',          label: 'API Tester',   Icon: Zap },
   { id: 'docs',         label: 'Docs',         Icon: BookOpen },
   { id: 'pr',           label: 'PR & Actions', Icon: GitPullRequest },
+  { id: 'actions',      label: 'Actions',      Icon: Play },
 ];
 
 function EnvBadge({
@@ -238,6 +240,7 @@ export default function App() {
             {renderedModule === 'docs'         && <DocsList />}
             {renderedModule === 'pr'           && <SelfService />}
             {renderedModule === 'user-scripts' && <UserScriptPanel />}
+            {renderedModule === 'actions'      && <ActionsPanel />}
           </div>
         </div>
       </div>
