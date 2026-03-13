@@ -4,3 +4,5 @@ coverage/
 generate-icons.js
 *.msi
 developer-buddy-*.md
+
+.superpowers/
