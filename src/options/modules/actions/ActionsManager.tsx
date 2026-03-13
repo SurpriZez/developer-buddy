@@ -43,7 +43,10 @@ function VariablesTable({
     onChange(next);
   };
 
-  const remove = (i: number) => onChange(variables.filter((_, idx) => idx !== i));
+  const remove = (i: number) => {
+    setRevealed(new Set());
+    onChange(variables.filter((_, idx) => idx !== i));
+  };
 
   const toggleReveal = (i: number) => {
     setRevealed((prev) => {
