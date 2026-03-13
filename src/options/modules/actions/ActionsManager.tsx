@@ -118,13 +118,17 @@ function VariablesTable({
                 />
                 <span className="text-[10px] text-text-muted">{v.secret ? 'Yes' : 'No'}</span>
               </label>
-              <button
-                onClick={() => toggleReveal(i)}
-                title={revealed.has(i) ? 'Hide' : 'Reveal'}
-                className="p-1 text-text-muted hover:text-text-primary transition-colors"
-              >
-                {revealed.has(i) ? <EyeOff size={12} /> : <Eye size={12} />}
-              </button>
+              {v.secret ? (
+                <button
+                  onClick={() => toggleReveal(i)}
+                  title={revealed.has(i) ? 'Hide' : 'Reveal'}
+                  className="p-1 text-text-muted hover:text-text-primary transition-colors"
+                >
+                  {revealed.has(i) ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
+              ) : (
+                <span />
+              )}
               <button
                 onClick={() => remove(i)}
                 className="p-1 text-text-muted hover:text-red-400 transition-colors"
@@ -348,8 +352,6 @@ export function ActionsManager() {
   const [editingAction, setEditingAction] = useState<SelfServiceAction | null>(null);
   const [actions, setActions] = useState<SelfServiceAction[]>([]);
   const [variables, setVariables] = useState<ActionVariable[]>([]);
-  const [varsDirty, setVarsDirty] = useState(false);
-
   const load = useCallback(async () => {
     const [acts, vars] = await Promise.all([
       StorageService.getSelfServiceActions(),
@@ -361,14 +363,9 @@ export function ActionsManager() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleVarsChange = (vars: ActionVariable[]) => {
+  const handleVarsChange = async (vars: ActionVariable[]) => {
     setVariables(vars);
-    setVarsDirty(true);
-  };
-
-  const handleSaveVars = async () => {
-    await StorageService.saveActionVariables(variables);
-    setVarsDirty(false);
+    await StorageService.saveActionVariables(vars);
   };
 
   const handleSaveAction = async (action: SelfServiceAction) => {
@@ -400,16 +397,6 @@ export function ActionsManager() {
       {/* Section 1: Variables */}
       <div>
         <VariablesTable variables={variables} onChange={handleVarsChange} />
-        {varsDirty && (
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={handleSaveVars}
-              className="px-4 py-2 text-sm bg-accent text-[var(--color-bg-primary)] rounded-card font-medium hover:opacity-90 transition-colors"
-            >
-              Save Variables
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Divider */}
