@@ -1,5 +1,5 @@
 import { StorageService } from '../../src/shared/storage/StorageService';
-import type { Script, EnvProfile, StorageSchema } from '../../src/shared/types';
+import type { Script, EnvProfile, StorageSchema, SelfServiceAction } from '../../src/shared/types';
 
 function makeScript(overrides: Partial<Script> = {}): Script {
   return {
@@ -125,7 +125,7 @@ describe('StorageService — exportAll / importAll', () => {
   });
 });
 
-function makeAction(overrides: Partial<import('../../src/shared/types').SelfServiceAction> = {}): import('../../src/shared/types').SelfServiceAction {
+function makeAction(overrides: Partial<SelfServiceAction> = {}): SelfServiceAction {
   return {
     id: 'action-1',
     name: 'Deploy Staging',
