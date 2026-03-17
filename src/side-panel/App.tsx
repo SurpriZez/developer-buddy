@@ -32,7 +32,7 @@ const MODULES: ModuleDef[] = [
   { id: 'scripts',      label: 'Scripts',      Icon: Terminal },
   { id: 'api',          label: 'API Tester',   Icon: Zap },
   { id: 'docs',         label: 'Docs',         Icon: BookOpen },
-  { id: 'pr',           label: 'PR & Actions', Icon: GitPullRequest },
+  { id: 'pr',           label: 'Pull Requests', Icon: GitPullRequest },
   { id: 'actions',      label: 'Actions',      Icon: Play },
 ];
 

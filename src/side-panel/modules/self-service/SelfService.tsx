@@ -32,10 +32,11 @@ interface GitHubPR {
   draft: boolean;
   comments: number;
   created_at: string;
-  pull_request?: { url: string };
+  closed_at: string | null;
+  pull_request?: { url: string; merged_at: string | null };
 }
 
-type Tab = 'authored' | 'review';
+type Tab = 'authored' | 'review' | 'merged';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -381,10 +382,44 @@ function PRRow({ pr, token, onMerged }: { pr: GitHubPR; token: string; onMerged:
   );
 }
 
+function MergedPRRow({ pr }: { pr: GitHubPR }) {
+  const mergedAt = pr.pull_request?.merged_at ?? pr.closed_at;
+  return (
+    <button
+      onClick={() => chrome.tabs.create({ url: pr.html_url })}
+      className="w-full text-left px-3 py-2.5 border border-theme-border rounded-card bg-surface hover:bg-accent-container transition-colors space-y-1"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="shrink-0 inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-accent-container text-accent border border-accent/30 leading-tight">
+            {repoName(pr.repository_url)}
+          </span>
+          <span className="text-xs font-medium leading-snug text-text-primary">{pr.title}</span>
+        </div>
+        <span className="text-xs text-text-muted font-mono shrink-0">#{pr.number}</span>
+      </div>
+      <div className="flex items-center gap-2.5 text-[10px] text-text-muted">
+        <span className="flex items-center gap-1">
+          <GitMerge size={10} className="text-accent" />
+          {mergedAt ? relativeTime(mergedAt) : '—'}
+        </span>
+        {pr.comments > 0 && (
+          <span className="flex items-center gap-1">
+            <MessageSquare size={10} />
+            {pr.comments}
+          </span>
+        )}
+        <span className="px-1.5 py-0.5 rounded bg-accent-container text-accent text-[10px] font-medium">Merged</span>
+      </div>
+    </button>
+  );
+}
+
 function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconnect: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('authored');
   const [authoredPRs, setAuthoredPRs] = useState<GitHubPR[]>([]);
   const [reviewPRs, setReviewPRs] = useState<GitHubPR[]>([]);
+  const [mergedPRs, setMergedPRs] = useState<GitHubPR[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -392,18 +427,14 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
     setLoading(true);
     setError('');
     try {
-      const [authored, review] = await Promise.all([
-        searchPRs(
-          config.token,
-          `is:pr is:open author:${config.username}`
-        ),
-        searchPRs(
-          config.token,
-          `is:pr is:open review-requested:${config.username}`
-        ),
+      const [authored, review, merged] = await Promise.all([
+        searchPRs(config.token, `is:pr is:open author:${config.username}`),
+        searchPRs(config.token, `is:pr is:open review-requested:${config.username}`),
+        searchPRs(config.token, `is:pr is:merged author:${config.username} sort:updated`),
       ]);
       setAuthoredPRs(authored);
       setReviewPRs(review);
+      setMergedPRs(merged);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch PRs.');
     } finally {
@@ -415,7 +446,7 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
     fetchPRs();
   }, [fetchPRs]);
 
-  const currentPRs = activeTab === 'authored' ? authoredPRs : reviewPRs;
+  const currentPRs = activeTab === 'authored' ? authoredPRs : activeTab === 'review' ? reviewPRs : mergedPRs;
 
   return (
     <div className="border border-theme-border rounded-card bg-surface overflow-hidden">
@@ -474,6 +505,17 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('merged')}
+          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === 'merged'
+              ? 'border-accent text-accent'
+              : 'border-transparent text-text-muted hover:text-text-primary'
+          }`}
+        >
+          <GitMerge size={11} />
+          Merged
+        </button>
       </div>
 
       {/* Content */}
@@ -508,7 +550,9 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
         )}
 
         {!loading && !error && currentPRs.map((pr) => (
-          <PRRow key={pr.id} pr={pr} token={config.token} onMerged={fetchPRs} />
+          activeTab === 'merged'
+            ? <MergedPRRow key={pr.id} pr={pr} />
+            : <PRRow key={pr.id} pr={pr} token={config.token} onMerged={fetchPRs} />
         ))}
       </div>
     </div>
