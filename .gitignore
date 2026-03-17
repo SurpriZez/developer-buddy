@@ -3,6 +3,7 @@ dist/
 coverage/
 generate-icons.js
 *.msi
+developer-buddy-*.zip
 developer-buddy-*.md
 
 .superpowers/
