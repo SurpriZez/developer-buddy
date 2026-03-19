@@ -7,10 +7,11 @@
 
 ## Overview
 
-Two independent features added to Developer Buddy:
+Three independent features added to Developer Buddy:
 
 1. **Edit Deployment Connections** — users can edit the credentials or monitored pipelines of an existing connection in the Deployments panel without deleting and re-adding it.
-2. **PR Notifications** — background polling fires OS-level Chrome notifications when an authored PR becomes ready to merge or when its checks start failing.
+2. **PR Notifications** — background polling fires OS-level Chrome notifications when an authored PR changes merge state (ready to merge, checks failing, conflicts, branch behind).
+3. **Deployment Notifications** — background polling fires OS-level Chrome notifications when a monitored GitHub Actions or Jenkins run transitions to success or failure.
 
 ---
 
@@ -110,16 +111,20 @@ interface PRSnapshot {
 
 ### Background polling (service-worker.ts)
 
-On `chrome.runtime.onInstalled`, create the alarm only if it does not already exist (prevents resetting the timer on every extension update):
+On `chrome.runtime.onInstalled`, clear any legacy alarm name and create `'buddy-notify'` only if it does not already exist:
 ```typescript
-chrome.alarms.get('pr-notify', (existing) => {
-  if (!existing) chrome.alarms.create('pr-notify', { periodInMinutes: 2 });
+chrome.alarms.clear('pr-notify'); // remove any alarm from a prior version
+chrome.alarms.get('buddy-notify', (existing) => {
+  if (!existing) chrome.alarms.create('buddy-notify', { periodInMinutes: 2 });
 });
 ```
 
 On `chrome.alarms.onAlarm`:
 ```
-if (alarm.name === 'pr-notify') runPRNotifyPoll()
+if (alarm.name === 'buddy-notify') {
+  runPRNotifyPoll();
+  runDeployNotifyPoll();
+}
 ```
 
 `runPRNotifyPoll()` steps:
@@ -132,6 +137,8 @@ if (alarm.name === 'pr-notify') runPRNotifyPoll()
 7. Compare each PR's new state to its snapshot — fire notification for each **transition**:
    - `→ clean`: title "Ready to merge", message "{title} — {repo} #{number}"
    - `→ unstable (failing)`: title "Checks failing", message "{title} — {repo} #{number}"
+   - `→ dirty`: title "Merge conflict", message "{title} — {repo} #{number}"
+   - `→ behind`: title "Branch behind", message "{title} — {repo} #{number}"
 8. Build updated snapshot from **only the currently open PRs** (prunes closed/merged PRs automatically — keys not in the current search result are dropped)
 9. Save updated snapshots back to `developer_buddy_pr_notify_state`
 
@@ -156,12 +163,13 @@ chrome.notifications.create(`pr-notify:${pr.html_url}`, {
 
 ```typescript
 chrome.notifications.onClicked.addListener((notificationId) => {
-  // notificationId encodes the PR URL: "pr-notify:{url}"
-  chrome.tabs.create({ url: extractUrlFromId(notificationId) });
+  // IDs are formatted as "{prefix}:{url}" — strip everything up to and including the first ":"
+  const url = notificationId.slice(notificationId.indexOf(':') + 1);
+  if (url.startsWith('http')) chrome.tabs.create({ url });
 });
 ```
 
-Notification IDs use the format `pr-notify:{html_url}` so the click handler can open the correct PR without additional storage lookups.
+Notification IDs use the format `{prefix}:{html_url}` — e.g. `pr-notify:https://github.com/...` or `deploy-notify:https://...`. Stripping up to the first `:` recovers the URL generically for both prefixes without hard-coding either string.
 
 ### Opt-out toggle (SelfService.tsx)
 
@@ -177,14 +185,105 @@ A toggle row is added to the Pull Requests panel, **above the tab bar** (above t
 
 ---
 
+## Feature 3: Deployment Notifications
+
+### Problem
+
+Developers want to know immediately when a monitored GitHub Actions workflow or Jenkins job completes — success or failure — without having to open the Deployments panel.
+
+### Scope
+
+- Covers all connections configured in `developer_buddy_deployments`
+- Fires on state **transitions** only (no repeat notifications for unchanged state)
+- Notifies on: `in_progress → success`, `in_progress → failure`, new run appearing as `failure`
+- Does **not** notify when a new run appears as `success` (avoids noise for already-completed runs discovered on first poll)
+- Opt-out toggle in the Deployments panel; notifications are **on by default**
+
+### Storage schema
+
+```typescript
+// 'developer_buddy_deploy_notifications' — user settings
+interface DeployNotificationSettings {
+  enabled: boolean;  // default: true
+}
+
+// 'developer_buddy_deploy_notify_state' — internal snapshot (not shown in UI)
+interface DeployNotificationState {
+  snapshots: Record<string, DeploySnapshot>;  // key: item.id (e.g. "gh-12345678")
+}
+
+interface DeploySnapshot {
+  status: 'success' | 'failure' | 'in_progress' | 'cancelled' | 'unknown';
+  connectionLabel: string;
+  runName: string;
+  buildRef: string;
+  url: string;
+}
+```
+
+### Background polling
+
+The `'buddy-notify'` alarm (established in Feature 2) triggers both `runPRNotifyPoll()` and `runDeployNotifyPoll()` — no additional alarm is needed.
+
+**Shared fetch module:** `fetchAllConnections` and its full dependency chain (`fetchGitHubRuns`, `fetchJenkinsBuilds`, `mapGitHubStatus`, `mapJenkinsStatus`, `jenkinsJobPath`, `jenkinsAuthHeaders`) must be extracted from `DeploymentsPanel.tsx` into a new shared module:
+
+```
+src/shared/deployments/deploymentFetcher.ts
+```
+
+This module exports `fetchAllConnections`, `DeploymentItem`, and the connection types. `DeploymentsPanel.tsx` imports from this module instead of defining them inline. The service worker also imports from this module to run the deployment poll.
+
+`runDeployNotifyPoll()` steps:
+1. Load `developer_buddy_deployments` — if no connections, return early
+2. Load `developer_buddy_deploy_notifications` — if `enabled === false`, return early
+3. Load GitHub token from `developer_buddy_github` (for GitHub Actions connections)
+4. Call `fetchAllConnections(connections, githubToken)` (imported from `src/shared/deployments/deploymentFetcher.ts`) to get current `DeploymentItem[]`
+5. Load current `developer_buddy_deploy_notify_state` snapshot
+6. For each item, compare to its snapshot and fire notification for transitions:
+   - New item with `failure` → notify "Deployment failed: {runName} ({buildRef}) — {connectionLabel}"
+   - `in_progress → success` → notify "Deployment succeeded: {runName} ({buildRef}) — {connectionLabel}"
+   - `in_progress → failure` → notify "Deployment failed: {runName} ({buildRef}) — {connectionLabel}"
+7. Rebuild snapshot from **only the items returned in the current poll** (prunes stale entries automatically)
+8. Save updated snapshot to `developer_buddy_deploy_notify_state`
+
+### Notification creation
+
+Same pattern as PR notifications — direct `chrome.notifications.create` with a custom ID:
+
+```typescript
+chrome.notifications.create(`deploy-notify:${item.url}`, {
+  type: 'basic',
+  iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+  title,
+  message,
+});
+```
+
+The `chrome.notifications.onClicked` handler already strips the prefix and opens the URL in a new tab. It handles both `pr-notify:` and `deploy-notify:` prefixes.
+
+### Opt-out toggle (DeploymentsPanel.tsx)
+
+A toggle row is added to `DeploymentsDashboard`, between the header row and the feed:
+
+```
+[Bell / BellOff icon]  Deployment Notifications  [on/off pill toggle]
+```
+
+- Reads initial state from `developer_buddy_deploy_notifications.enabled` (defaults to `true` if absent)
+- On toggle: writes new value to storage immediately
+- Hidden when the `AddConnectionForm` is open
+
+---
+
 ## Files Changed
 
 | File | Change |
 |---|---|
 | `manifest.json` | Add `"alarms"` to permissions |
-| `src/background/service-worker.ts` | Add alarm creation, poll cycle, notification click handler |
-| `src/side-panel/modules/self-service/SelfService.tsx` | Add notification toggle row |
-| `src/side-panel/modules/deployments/DeploymentsPanel.tsx` | Edit connection details + edit pipelines support in `AddConnectionForm`, `DeploymentsFeed`, `DeploymentsDashboard` |
+| `src/shared/deployments/deploymentFetcher.ts` | **New** — extract `fetchAllConnections` + types from `DeploymentsPanel.tsx` into shared module |
+| `src/background/service-worker.ts` | Add `'buddy-notify'` alarm, PR poll cycle, deployment poll cycle, notification click handler |
+| `src/side-panel/modules/self-service/SelfService.tsx` | Add PR notification toggle row (above tab bar) |
+| `src/side-panel/modules/deployments/DeploymentsPanel.tsx` | Import from shared module; edit connection support in `AddConnectionForm`, `DeploymentsFeed`, `DeploymentsDashboard`; add deployment notification toggle row |
 
 ---
 
@@ -198,5 +297,3 @@ A toggle row is added to the Pull Requests panel, **above the tab bar** (above t
 
 - Notifications for PRs assigned for review
 - Configurable poll interval
-- Notification for other state transitions (e.g., `dirty` conflicts, `behind`)
-- Jenkins/GitHub Actions deployment notifications
