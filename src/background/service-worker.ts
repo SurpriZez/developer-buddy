@@ -13,6 +13,10 @@ import {
 } from '../shared/deployments/deploymentFetcher';
 import { getPRNotificationMessage, type PRSnapshot } from '../shared/pr/prNotificationLogic';
 
+interface PRNotificationState {
+  snapshots: Record<string, PRSnapshot>;
+}
+
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
 // Open the side panel when the toolbar icon is clicked
@@ -153,6 +157,142 @@ chrome.notifications.onClicked.addListener((notificationId) => {
     }
   }
   chrome.notifications.clear(notificationId);
+});
+
+async function runPRNotifyPoll(): Promise<void> {
+  try {
+    // 1. Check GitHub config
+    const ghResult = await chrome.storage.local.get('developer_buddy_github');
+    const ghConfig = ghResult['developer_buddy_github'] as
+      | { token?: string; username?: string }
+      | undefined;
+    if (!ghConfig?.token || !ghConfig?.username) return;
+
+    // 2. Check notifications enabled
+    const notifResult = await chrome.storage.local.get('developer_buddy_pr_notifications');
+    const notifSettings = notifResult['developer_buddy_pr_notifications'] as
+      | { enabled?: boolean }
+      | undefined;
+    if (notifSettings?.enabled === false) return;
+
+    // 3. Fetch authored open PRs
+    const searchUrl = `https://api.github.com/search/issues?q=${encodeURIComponent(
+      `is:pr is:open author:${ghConfig.username}`,
+    )}&sort=updated&per_page=20`;
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        Authorization: `token ${ghConfig.token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+    if (!searchRes.ok) return;
+    const searchData = await searchRes.json();
+    const prs = (
+      searchData.items as Array<{
+        id: number;
+        number: number;
+        title: string;
+        html_url: string;
+        repository_url: string;
+        pull_request?: { url: string };
+      }>
+    ).filter((item) => !!item.pull_request);
+
+    // 4. Load current snapshot
+    const stateResult = await chrome.storage.local.get('developer_buddy_pr_notify_state');
+    const state = stateResult['developer_buddy_pr_notify_state'] as
+      | PRNotificationState
+      | undefined;
+    const oldSnapshots: Record<string, PRSnapshot> = state?.snapshots ?? {};
+    const newSnapshots: Record<string, PRSnapshot> = {};
+
+    // 5. For each PR, fetch detail + check-runs, compare, notify
+    for (const pr of prs) {
+      if (!pr.pull_request?.url) continue;
+      const repoName = pr.repository_url.replace('https://api.github.com/repos/', '');
+      const prKey = `${repoName}#${pr.number}`;
+
+      try {
+        const detailRes = await fetch(pr.pull_request.url, {
+          headers: {
+            Authorization: `token ${ghConfig.token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        });
+        if (!detailRes.ok) {
+          if (oldSnapshots[prKey]) newSnapshots[prKey] = oldSnapshots[prKey];
+          continue;
+        }
+        const detail = await detailRes.json() as {
+          draft: boolean;
+          mergeable_state: string;
+          head: { sha: string };
+        };
+        // Skip draft PRs (draft field is only reliable on the detail response)
+        if (detail.draft) continue;
+        const mergeState = detail.mergeable_state;
+
+        let checksFailing = false;
+        if (mergeState === 'unstable') {
+          const checksRes = await fetch(
+            `${pr.repository_url}/commits/${detail.head.sha}/check-runs?per_page=100`,
+            {
+              headers: {
+                Authorization: `token ${ghConfig.token}`,
+                Accept: 'application/vnd.github+json',
+              },
+            },
+          );
+          if (checksRes.ok) {
+            const checksData = await checksRes.json();
+            const runs = (checksData.check_runs ?? []) as Array<{ status: string }>;
+            checksFailing = !runs.some(
+              (r) => r.status === 'in_progress' || r.status === 'queued',
+            );
+          }
+        }
+
+        // Only fire if we've seen this PR before (avoids notification flood on first run)
+        if (prKey in oldSnapshots) {
+          const notification = getPRNotificationMessage(
+            mergeState,
+            checksFailing,
+            oldSnapshots[prKey],
+            pr.title,
+            repoName,
+            pr.number,
+          );
+          if (notification) {
+            chrome.notifications.create(`pr-notify:${pr.html_url}`, {
+              type: 'basic',
+              iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+              title: notification.title,
+              message: notification.message,
+            });
+          }
+        }
+
+        newSnapshots[prKey] = { mergeState, checksFailing };
+      } catch {
+        // Preserve last-known-good snapshot on per-PR error
+        if (oldSnapshots[prKey]) newSnapshots[prKey] = oldSnapshots[prKey];
+      }
+    }
+
+    // 6. Save pruned snapshot (only currently open PRs)
+    await chrome.storage.local.set({
+      developer_buddy_pr_notify_state: { snapshots: newSnapshots },
+    });
+  } catch {
+    // Fail silently — next alarm will retry
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'buddy-notify') {
+    runPRNotifyPoll().catch(console.error);
+    // runDeployNotifyPoll added in Task 6
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
