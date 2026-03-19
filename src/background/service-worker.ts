@@ -145,9 +145,12 @@ async function handleNotification(payload: { title: string; message: string }): 
 }
 
 chrome.notifications.onClicked.addListener((notificationId) => {
-  const url = notificationId.slice(notificationId.indexOf(':') + 1);
-  if (url.startsWith('http')) {
-    chrome.tabs.create({ url });
+  const colonIdx = notificationId.indexOf(':');
+  if (colonIdx !== -1) {
+    const url = notificationId.slice(colonIdx + 1);
+    if (url.startsWith('http')) {
+      chrome.tabs.create({ url });
+    }
   }
   chrome.notifications.clear(notificationId);
 });
