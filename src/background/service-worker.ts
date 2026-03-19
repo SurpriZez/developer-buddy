@@ -17,6 +17,10 @@ interface PRNotificationState {
   snapshots: Record<string, PRSnapshot>;
 }
 
+interface DeployNotificationState {
+  snapshots: Record<string, DeploySnapshot>;
+}
+
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
 // Open the side panel when the toolbar icon is clicked
@@ -288,10 +292,71 @@ async function runPRNotifyPoll(): Promise<void> {
   }
 }
 
+async function runDeployNotifyPoll(): Promise<void> {
+  try {
+    // 1. Check deployments config
+    const deplResult = await chrome.storage.local.get('developer_buddy_deployments');
+    const deplConfig = deplResult['developer_buddy_deployments'] as
+      | DeploymentsConfig
+      | undefined;
+    if (!deplConfig?.connections?.length) return;
+
+    // 2. Check notifications enabled
+    const notifResult = await chrome.storage.local.get('developer_buddy_deploy_notifications');
+    const notifSettings = notifResult['developer_buddy_deploy_notifications'] as
+      | { enabled?: boolean }
+      | undefined;
+    if (notifSettings?.enabled === false) return;
+
+    // 3. Load GitHub token (may be null — fetchAllConnections handles this gracefully)
+    const ghResult = await chrome.storage.local.get('developer_buddy_github');
+    const ghToken =
+      (ghResult['developer_buddy_github'] as { token?: string } | undefined)?.token ?? null;
+
+    // 4. Fetch all deployment items
+    const { items } = await fetchAllConnections(deplConfig.connections, ghToken);
+
+    // 5. Load current snapshot
+    const stateResult = await chrome.storage.local.get('developer_buddy_deploy_notify_state');
+    const state = stateResult['developer_buddy_deploy_notify_state'] as
+      | DeployNotificationState
+      | undefined;
+    const oldSnapshots: Record<string, DeploySnapshot> = state?.snapshots ?? {};
+    const newSnapshots: Record<string, DeploySnapshot> = {};
+
+    // 6. Compare and fire notifications
+    for (const item of items) {
+      const notification = getDeployNotificationMessage(item, oldSnapshots[item.id]);
+      if (notification) {
+        await chrome.notifications.create(`deploy-notify:${item.url}`, {
+          type: 'basic',
+          iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+          title: notification.title,
+          message: notification.message,
+        });
+      }
+      newSnapshots[item.id] = {
+        status: item.status,
+        connectionLabel: item.connectionLabel,
+        runName: item.runName,
+        buildRef: item.buildRef,
+        url: item.url,
+      };
+    }
+
+    // 7. Save pruned snapshot
+    await chrome.storage.local.set({
+      developer_buddy_deploy_notify_state: { snapshots: newSnapshots },
+    });
+  } catch {
+    // Fail silently
+  }
+}
+
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'buddy-notify') {
     runPRNotifyPoll().catch(console.error);
-    // runDeployNotifyPoll added in Task 6
+    runDeployNotifyPoll().catch(console.error);
   }
 });
 
