@@ -21,6 +21,55 @@ interface DeployNotificationState {
   snapshots: Record<string, DeploySnapshot>;
 }
 
+interface PendingToast {
+  id: string;
+  title: string;
+  message: string;
+  url?: string;
+}
+
+const PENDING_TOASTS_KEY = 'developer_buddy_pending_toasts';
+
+async function showBrowserToast(id: string, title: string, message: string, url?: string): Promise<void> {
+  // Persist so tab switches pick it up
+  const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+  const existing = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
+  const toast: PendingToast = { id, title, message, url };
+  await chrome.storage.session.set({
+    [PENDING_TOASTS_KEY]: [...existing.filter((t) => t.id !== id), toast],
+  });
+
+  // Push to the currently active tab
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  if (tab?.id && tab.url?.startsWith('http')) {
+    chrome.tabs.sendMessage(tab.id, { type: 'SHOW_TOAST', ...toast }).catch(() => {});
+  }
+}
+
+async function dismissPendingToast(id: string): Promise<void> {
+  const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+  const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
+  await chrome.storage.session.set({
+    [PENDING_TOASTS_KEY]: toasts.filter((t) => t.id !== id),
+  });
+}
+
+// Re-deliver pending toasts when the user switches tabs
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url?.startsWith('http')) return;
+    const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+    const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
+    for (const toast of toasts) {
+      chrome.tabs.sendMessage(tabId, { type: 'SHOW_TOAST', ...toast }).catch(() => {});
+    }
+  } catch {
+    // Tab may not be ready; content script will recover via session storage on load
+  }
+});
+
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
 // Open the side panel when the toolbar icon is clicked
@@ -144,12 +193,7 @@ async function handleRunScript(
 }
 
 async function handleNotification(payload: { title: string; message: string }): Promise<void> {
-  await chrome.notifications.create({
-    type: 'basic',
-    iconUrl: chrome.runtime.getURL('icons/icon48.png'),
-    title: payload.title,
-    message: payload.message,
-  });
+  await showBrowserToast(`db-notif-${Date.now()}`, payload.title, payload.message);
 }
 
 chrome.notifications.onClicked.addListener((notificationId) => {
@@ -267,12 +311,12 @@ async function runPRNotifyPoll(): Promise<void> {
             pr.number,
           );
           if (notification) {
-            await chrome.notifications.create(`pr-notify:${pr.html_url}`, {
-              type: 'basic',
-              iconUrl: chrome.runtime.getURL('icons/icon48.png'),
-              title: notification.title,
-              message: notification.message,
-            });
+            await showBrowserToast(
+              `pr-notify:${pr.html_url}`,
+              notification.title,
+              notification.message,
+              pr.html_url,
+            );
           }
         }
 
@@ -328,12 +372,12 @@ async function runDeployNotifyPoll(): Promise<void> {
     for (const item of items) {
       const notification = getDeployNotificationMessage(item, oldSnapshots[item.id]);
       if (notification) {
-        await chrome.notifications.create(`deploy-notify:${item.url}`, {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icons/icon48.png'),
-          title: notification.title,
-          message: notification.message,
-        });
+        await showBrowserToast(
+          `deploy-notify:${item.url}`,
+          notification.title,
+          notification.message,
+          item.url,
+        );
       }
       newSnapshots[item.id] = {
         status: item.status,
@@ -367,6 +411,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       break;
     case 'DB_NOTIFICATION':
       handleNotification(message.payload).then(() => sendResponse({ ok: true })).catch(console.error);
+      break;
+    case 'TOAST_DISMISSED':
+      dismissPendingToast(message.id).catch(console.error);
+      sendResponse({ ok: true });
       break;
     case 'DB_GET_ACTIVE_ENV':
       StorageService.getActiveProfile().then((profile) => {

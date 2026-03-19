@@ -15,6 +15,7 @@ module.exports = {
     'content-scripts/user-script-runner': './src/content-scripts/user-script-runner.ts',
     'content-scripts/grant-bridge': './src/content-scripts/grant-bridge.ts',
     'content-scripts/env-bridge': './src/content-scripts/env-bridge.ts',
+    'content-scripts/toast-bridge': './src/content-scripts/toast-bridge.ts',
   },
 
   output: {
@@ -51,6 +52,7 @@ module.exports = {
           'content-scripts/user-script-runner',
           'content-scripts/grant-bridge',
           'content-scripts/env-bridge',
+          'content-scripts/toast-bridge',
           'background/service-worker',
           'offscreen/offscreen',
         ];
