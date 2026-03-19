@@ -17,11 +17,6 @@ import {
   type DeploymentItem,
   type ConnectionError,
   fetchAllConnections,
-  fetchGitHubRuns,
-  fetchJenkinsBuilds,
-  mapGitHubStatus,
-  mapJenkinsStatus,
-  jenkinsJobPath,
   jenkinsAuthHeaders,
 } from '../../../shared/deployments/deploymentFetcher';
 
