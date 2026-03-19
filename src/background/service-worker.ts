@@ -62,23 +62,23 @@ async function dismissPendingToast(id: string): Promise<void> {
   });
 }
 
-// Re-deliver pending toasts when the user switches tabs
+// Re-deliver pending toasts when the user switches tabs.
+// Always injects the file — the guard in toast-bridge prevents duplicate listeners.
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
-    const tab = await chrome.tabs.get(tabId);
-    if (!tab.url?.startsWith('http')) return;
     const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
     const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
-    for (const toast of toasts) {
-      chrome.tabs.sendMessage(tabId, { type: 'SHOW_TOAST', ...toast }).catch(() => {
-        chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['content-scripts/toast-bridge.js'],
-        }).catch(console.error);
-      });
-    }
+    if (!toasts.length) return;
+
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url?.startsWith('http')) return;
+
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content-scripts/toast-bridge.js'],
+    });
   } catch {
-    // Tab may not be ready; content script will recover via session storage on load
+    // Tab not injectable (chrome://, PDF, still loading, etc.)
   }
 });
 

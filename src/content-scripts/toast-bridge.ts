@@ -3,10 +3,15 @@
 // On load: checks chrome.storage.session for pending toasts and shows them.
 // Listens for SHOW_TOAST messages from the background service worker.
 // Sends TOAST_DISMISSED back when the user dismisses or auto-dismiss fires.
+//
+// Guards against double-initialization when executeScript re-injects this file
+// on tab switches: uses a data attribute on documentElement as a shared DOM flag.
+// Re-injection only triggers the session storage check, not a second listener.
 
 const TOAST_CONTAINER_ID = 'db-toast-container';
 const TOAST_STYLE_ID = 'db-toast-styles';
 const PENDING_TOASTS_KEY = 'developer_buddy_pending_toasts';
+const INIT_GUARD = 'data-db-toast-bridge';
 
 interface PendingToast {
   id: string;
@@ -135,17 +140,28 @@ function showToast(toast: PendingToast): void {
   setTimeout(dismiss, 6000);
 }
 
-// On page load: show any toasts that are still pending (handles tab switches)
-chrome.storage.session.get(PENDING_TOASTS_KEY).then((result) => {
-  const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
-  for (const toast of toasts) showToast(toast);
-}).catch(() => {});
+function showPendingToasts(): void {
+  chrome.storage.session.get(PENDING_TOASTS_KEY).then((result) => {
+    const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
+    for (const toast of toasts) showToast(toast);
+  }).catch(() => {});
+}
 
-// Listen for new toasts pushed from the background service worker
-chrome.runtime.onMessage.addListener((message: { type: string } & PendingToast) => {
-  if (message.type === 'SHOW_TOAST') {
-    showToast({ id: message.id, title: message.title, message: message.message, url: message.url });
-  }
-});
+if (document.documentElement.hasAttribute(INIT_GUARD)) {
+  // Already initialized — re-injection from tab switch, just recover pending toasts
+  showPendingToasts();
+} else {
+  document.documentElement.setAttribute(INIT_GUARD, '1');
+
+  // Register message listener once
+  chrome.runtime.onMessage.addListener((message: { type: string } & PendingToast) => {
+    if (message.type === 'SHOW_TOAST') {
+      showToast({ id: message.id, title: message.title, message: message.message, url: message.url });
+    }
+  });
+
+  // Show any toasts pending from before this page loaded
+  showPendingToasts();
+}
 
 export {};
