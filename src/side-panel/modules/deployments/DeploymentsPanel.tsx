@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   Settings2,
   Pencil,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import {
   type GitHubActionsConnection,
@@ -677,6 +679,23 @@ function DeploymentsDashboard() {
     mode: 'details' | 'pipelines';
   } | null>(null);
 
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  useEffect(() => {
+    chrome.storage.local.get('developer_buddy_deploy_notifications').then((result) => {
+      const cfg = result['developer_buddy_deploy_notifications'] as
+        | { enabled?: boolean }
+        | undefined;
+      setNotificationsEnabled(cfg?.enabled !== false);
+    });
+  }, []);
+
+  const toggleNotifications = () => {
+    const next = !notificationsEnabled;
+    setNotificationsEnabled(next);
+    chrome.storage.local.set({ developer_buddy_deploy_notifications: { enabled: next } });
+  };
+
   useEffect(() => {
     fetchDeploymentsConfig().then(setConfig);
   }, []);
@@ -746,15 +765,43 @@ function DeploymentsDashboard() {
           initialStep={editingConn ? (editingConn.mode === 'details' ? 1 : 2) : undefined}
         />
       ) : (
-        <DeploymentsFeed
-          connections={config.connections}
-          refreshKey={refreshKey}
-          onRemoveConnection={handleRemoveConnection}
-          onEditConnection={(id, mode) => {
-            const conn = config.connections.find((c) => c.id === id);
-            if (conn) setEditingConn({ conn, mode });
-          }}
-        />
+        <>
+          {/* Notification toggle */}
+          <div className="flex items-center justify-end">
+            <button
+              onClick={toggleNotifications}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors"
+              title={notificationsEnabled ? 'Disable deployment notifications' : 'Enable deployment notifications'}
+            >
+              {notificationsEnabled ? (
+                <Bell size={11} className="text-accent" />
+              ) : (
+                <BellOff size={11} />
+              )}
+              <span>Notifications {notificationsEnabled ? 'on' : 'off'}</span>
+              <span
+                className={`inline-flex w-7 h-4 rounded-full transition-colors ${
+                  notificationsEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`m-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                    notificationsEnabled ? 'translate-x-3' : 'translate-x-0'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+          <DeploymentsFeed
+            connections={config.connections}
+            refreshKey={refreshKey}
+            onRemoveConnection={handleRemoveConnection}
+            onEditConnection={(id, mode) => {
+              const conn = config.connections.find((c) => c.id === id);
+              if (conn) setEditingConn({ conn, mode });
+            }}
+          />
+        </>
       )}
     </div>
   );
