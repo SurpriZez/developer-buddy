@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   XCircle,
   GitMerge,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -422,6 +424,22 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
   const [mergedPRs, setMergedPRs] = useState<GitHubPR[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  // Load notification setting on mount
+  useEffect(() => {
+    chrome.storage.local.get('developer_buddy_pr_notifications').then((result) => {
+      const cfg = result['developer_buddy_pr_notifications'] as { enabled?: boolean } | undefined;
+      // Default to true if key absent
+      setNotificationsEnabled(cfg?.enabled !== false);
+    });
+  }, []);
+
+  const toggleNotifications = () => {
+    const next = !notificationsEnabled;
+    setNotificationsEnabled(next);
+    chrome.storage.local.set({ developer_buddy_pr_notifications: { enabled: next } });
+  };
 
   const fetchPRs = useCallback(async () => {
     setLoading(true);
@@ -468,6 +486,34 @@ function PRDashboard({ config, onDisconnect }: { config: GitHubConfig; onDisconn
           className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent-container transition-colors text-text-muted hover:text-red-500"
         >
           <LogOut size={12} />
+        </button>
+      </div>
+
+      {/* Notification toggle */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-theme-border bg-surface">
+        <button
+          onClick={toggleNotifications}
+          className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors ml-auto"
+          title={notificationsEnabled ? 'Disable PR notifications' : 'Enable PR notifications'}
+        >
+          {notificationsEnabled ? (
+            <Bell size={11} className="text-accent" />
+          ) : (
+            <BellOff size={11} />
+          )}
+          <span>Notifications {notificationsEnabled ? 'on' : 'off'}</span>
+          {/* Pill toggle */}
+          <span
+            className={`inline-flex w-7 h-4 rounded-full transition-colors ${
+              notificationsEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <span
+              className={`m-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                notificationsEnabled ? 'translate-x-3' : 'translate-x-0'
+              }`}
+            />
+          </span>
         </button>
       </div>
 
