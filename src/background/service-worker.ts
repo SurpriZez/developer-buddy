@@ -4,6 +4,14 @@ import { StorageService } from '../shared/storage/StorageService';
 import { syncUserScriptRegistrations } from '../shared/utils/userScriptRegistrar';
 import { matchesPattern } from '../shared/utils/matchPattern';
 import type { UserScript } from '../shared/types';
+import {
+  fetchAllConnections,
+  getDeployNotificationMessage,
+  type DeploymentConnection,
+  type DeploymentsConfig,
+  type DeploySnapshot,
+} from '../shared/deployments/deploymentFetcher';
+import { getPRNotificationMessage, type PRSnapshot } from '../shared/pr/prNotificationLogic';
 
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
@@ -22,6 +30,12 @@ chrome.runtime.onInstalled.addListener((details) => {
       }
     }).catch(console.error);
   }
+
+  // Create the buddy-notify alarm (clears any legacy 'pr-notify' from prior versions)
+  chrome.alarms.clear('pr-notify');
+  chrome.alarms.get('buddy-notify', (existing) => {
+    if (!existing) chrome.alarms.create('buddy-notify', { periodInMinutes: 2 });
+  });
 });
 
 // Re-sync when userScripts change in storage
@@ -129,6 +143,14 @@ async function handleNotification(payload: { title: string; message: string }): 
     message: payload.message,
   });
 }
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  const url = notificationId.slice(notificationId.indexOf(':') + 1);
+  if (url.startsWith('http')) {
+    chrome.tabs.create({ url });
+  }
+  chrome.notifications.clear(notificationId);
+});
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   switch (message.type) {
