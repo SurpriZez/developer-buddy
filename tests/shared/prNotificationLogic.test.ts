@@ -29,7 +29,8 @@ describe('getPRNotificationMessage', () => {
   });
 
   it('does not notify for unstable when checks are still pending (not failing)', () => {
-    expect(getPRNotificationMessage('unstable', false, undefined, base.prTitle, base.repoName, base.prNumber)).toBeNull();
+    const old: PRSnapshot = { mergeState: 'clean', checksFailing: false };
+    expect(getPRNotificationMessage('unstable', false, old, base.prTitle, base.repoName, base.prNumber)).toBeNull();
   });
 
   it('does not notify when already in checksFailing state', () => {

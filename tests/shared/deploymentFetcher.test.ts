@@ -112,4 +112,9 @@ describe('getDeployNotificationMessage', () => {
     const old: DeploySnapshot = { status: 'unknown', connectionLabel: 'my-app', runName: 'Deploy to Production', buildRef: 'main', url: '' };
     expect(getDeployNotificationMessage({ ...baseItem, status: 'success' }, old)).toBeNull();
   });
+
+  it('does not notify on in_progress → cancelled', () => {
+    const old: DeploySnapshot = { status: 'in_progress', connectionLabel: 'my-app', runName: 'Deploy to Production', buildRef: 'main', url: '' };
+    expect(getDeployNotificationMessage({ ...baseItem, status: 'cancelled' }, old)).toBeNull();
+  });
 });
