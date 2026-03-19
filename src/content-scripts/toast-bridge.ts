@@ -1,6 +1,6 @@
 // Developer Buddy — Toast Bridge
 // Runs in ISOLATED world on all web pages.
-// On load: checks chrome.storage.session for pending toasts and shows them.
+// On load: checks chrome.storage.local for pending toasts and shows them.
 // Listens for SHOW_TOAST messages from the background service worker.
 // Sends TOAST_DISMISSED back when the user dismisses or auto-dismiss fires.
 //
@@ -141,7 +141,7 @@ function showToast(toast: PendingToast): void {
 }
 
 function showPendingToasts(): void {
-  chrome.storage.session.get(PENDING_TOASTS_KEY).then((result) => {
+  chrome.storage.local.get(PENDING_TOASTS_KEY).then((result) => {
     const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
     for (const toast of toasts) showToast(toast);
   }).catch(() => {});

@@ -32,10 +32,10 @@ const PENDING_TOASTS_KEY = 'developer_buddy_pending_toasts';
 
 async function showBrowserToast(id: string, title: string, message: string, url?: string): Promise<void> {
   // Persist so tab switches pick it up
-  const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+  const result = await chrome.storage.local.get(PENDING_TOASTS_KEY);
   const existing = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
   const toast: PendingToast = { id, title, message, url };
-  await chrome.storage.session.set({
+  await chrome.storage.local.set({
     [PENDING_TOASTS_KEY]: [...existing.filter((t) => t.id !== id), toast],
   });
 
@@ -55,9 +55,9 @@ async function showBrowserToast(id: string, title: string, message: string, url?
 }
 
 async function dismissPendingToast(id: string): Promise<void> {
-  const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+  const result = await chrome.storage.local.get(PENDING_TOASTS_KEY);
   const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
-  await chrome.storage.session.set({
+  await chrome.storage.local.set({
     [PENDING_TOASTS_KEY]: toasts.filter((t) => t.id !== id),
   });
 }
@@ -66,7 +66,7 @@ async function dismissPendingToast(id: string): Promise<void> {
 // Always injects the file — the guard in toast-bridge prevents duplicate listeners.
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
-    const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
+    const result = await chrome.storage.local.get(PENDING_TOASTS_KEY);
     const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
     if (!toasts.length) return;
 
