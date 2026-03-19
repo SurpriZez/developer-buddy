@@ -696,6 +696,13 @@ function DeploymentsDashboard() {
     chrome.storage.local.set({ developer_buddy_deploy_notifications: { enabled: next } });
   };
 
+  const sendTestNotification = () => {
+    chrome.runtime.sendMessage({
+      type: 'DB_NOTIFICATION',
+      payload: { title: 'Deployment succeeded', message: 'Build (main) — test-connection' },
+    });
+  };
+
   useEffect(() => {
     fetchDeploymentsConfig().then(setConfig);
   }, []);
@@ -767,7 +774,14 @@ function DeploymentsDashboard() {
       ) : (
         <>
           {/* Notification toggle */}
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={sendTestNotification}
+              className="text-xs text-text-muted hover:text-accent transition-colors"
+              title="Send a test notification"
+            >
+              Test
+            </button>
             <button
               onClick={toggleNotifications}
               className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors"
