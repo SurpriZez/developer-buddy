@@ -42,9 +42,16 @@ async function showBrowserToast(id: string, title: string, message: string, url?
   // Push to the currently active tab
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
-  if (tab?.id && tab.url?.startsWith('http')) {
-    chrome.tabs.sendMessage(tab.id, { type: 'SHOW_TOAST', ...toast }).catch(() => {});
-  }
+  if (!tab?.id || !tab.url?.startsWith('http')) return;
+
+  chrome.tabs.sendMessage(tab.id, { type: 'SHOW_TOAST', ...toast }).catch(() => {
+    // Content script not yet loaded (tab predates extension reload) — inject it.
+    // The script will read session storage on init and show the toast itself.
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      files: ['content-scripts/toast-bridge.js'],
+    }).catch(console.error);
+  });
 }
 
 async function dismissPendingToast(id: string): Promise<void> {
@@ -63,7 +70,12 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
     const result = await chrome.storage.session.get(PENDING_TOASTS_KEY);
     const toasts = (result[PENDING_TOASTS_KEY] ?? []) as PendingToast[];
     for (const toast of toasts) {
-      chrome.tabs.sendMessage(tabId, { type: 'SHOW_TOAST', ...toast }).catch(() => {});
+      chrome.tabs.sendMessage(tabId, { type: 'SHOW_TOAST', ...toast }).catch(() => {
+        chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content-scripts/toast-bridge.js'],
+        }).catch(console.error);
+      });
     }
   } catch {
     // Tab may not be ready; content script will recover via session storage on load
