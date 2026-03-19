@@ -362,6 +362,9 @@ function AddConnectionForm({
     if ((initialStep ?? 1) === 2 && existingConnection) {
       handleLoadPipelines();
     }
+    // Run once on mount only — state is already initialised from existingConnection
+    // before this effect fires; adding handleLoadPipelines to deps would cause
+    // re-triggers on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -470,7 +473,9 @@ function AddConnectionForm({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-text-primary">Add Connection</h3>
+      <h3 className="text-sm font-semibold text-text-primary">
+        {existingConnection ? 'Edit Connection' : 'Add Connection'}
+      </h3>
 
       {step === 1 && (
         <>
@@ -738,7 +743,7 @@ function DeploymentsDashboard() {
           onSave={handleSaveConnection}
           onCancel={editingConn ? handleEditCancel : () => setShowForm(false)}
           existingConnection={editingConn?.conn}
-          initialStep={editingConn?.mode === 'details' ? 1 : 2}
+          initialStep={editingConn ? (editingConn.mode === 'details' ? 1 : 2) : undefined}
         />
       ) : (
         <DeploymentsFeed
