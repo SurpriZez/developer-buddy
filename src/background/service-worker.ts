@@ -4,6 +4,22 @@ import { StorageService } from '../shared/storage/StorageService';
 import { syncUserScriptRegistrations } from '../shared/utils/userScriptRegistrar';
 import { matchesPattern } from '../shared/utils/matchPattern';
 import type { UserScript } from '../shared/types';
+import {
+  fetchAllConnections,
+  getDeployNotificationMessage,
+  type DeploymentConnection,
+  type DeploymentsConfig,
+  type DeploySnapshot,
+} from '../shared/deployments/deploymentFetcher';
+import { getPRNotificationMessage, type PRSnapshot } from '../shared/pr/prNotificationLogic';
+
+interface PRNotificationState {
+  snapshots: Record<string, PRSnapshot>;
+}
+
+interface DeployNotificationState {
+  snapshots: Record<string, DeploySnapshot>;
+}
 
 const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
@@ -22,6 +38,12 @@ chrome.runtime.onInstalled.addListener((details) => {
       }
     }).catch(console.error);
   }
+
+  // Create the buddy-notify alarm (clears any legacy 'pr-notify' from prior versions)
+  chrome.alarms.clear('pr-notify');
+  chrome.alarms.get('buddy-notify', (existing) => {
+    if (!existing) chrome.alarms.create('buddy-notify', { periodInMinutes: 2 });
+  });
 });
 
 // Re-sync when userScripts change in storage
@@ -129,6 +151,214 @@ async function handleNotification(payload: { title: string; message: string }): 
     message: payload.message,
   });
 }
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  const colonIdx = notificationId.indexOf(':');
+  if (colonIdx !== -1) {
+    const url = notificationId.slice(colonIdx + 1);
+    if (url.startsWith('http')) {
+      chrome.tabs.create({ url });
+    }
+  }
+  chrome.notifications.clear(notificationId);
+});
+
+async function runPRNotifyPoll(): Promise<void> {
+  try {
+    // 1. Check GitHub config
+    const ghResult = await chrome.storage.local.get('developer_buddy_github');
+    const ghConfig = ghResult['developer_buddy_github'] as
+      | { token?: string; username?: string }
+      | undefined;
+    if (!ghConfig?.token || !ghConfig?.username) return;
+
+    // 2. Check notifications enabled
+    const notifResult = await chrome.storage.local.get('developer_buddy_pr_notifications');
+    const notifSettings = notifResult['developer_buddy_pr_notifications'] as
+      | { enabled?: boolean }
+      | undefined;
+    if (notifSettings?.enabled === false) return;
+
+    // 3. Fetch authored open PRs
+    const searchUrl = `https://api.github.com/search/issues?q=${encodeURIComponent(
+      `is:pr is:open author:${ghConfig.username}`,
+    )}&sort=updated&per_page=20`;
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        Authorization: `token ${ghConfig.token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+    if (!searchRes.ok) return;
+    const searchData = await searchRes.json();
+    const prs = (
+      searchData.items as Array<{
+        id: number;
+        number: number;
+        title: string;
+        html_url: string;
+        repository_url: string;
+        pull_request?: { url: string };
+      }>
+    ).filter((item) => !!item.pull_request);
+
+    // 4. Load current snapshot
+    const stateResult = await chrome.storage.local.get('developer_buddy_pr_notify_state');
+    const state = stateResult['developer_buddy_pr_notify_state'] as
+      | PRNotificationState
+      | undefined;
+    const oldSnapshots: Record<string, PRSnapshot> = state?.snapshots ?? {};
+    const newSnapshots: Record<string, PRSnapshot> = {};
+
+    // 5. For each PR, fetch detail + check-runs, compare, notify
+    for (const pr of prs) {
+      if (!pr.pull_request?.url) continue;
+      const repoName = pr.repository_url.replace('https://api.github.com/repos/', '');
+      const prKey = `${repoName}#${pr.number}`;
+
+      try {
+        const detailRes = await fetch(pr.pull_request.url, {
+          headers: {
+            Authorization: `token ${ghConfig.token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        });
+        if (!detailRes.ok) {
+          if (oldSnapshots[prKey]) newSnapshots[prKey] = oldSnapshots[prKey];
+          continue;
+        }
+        const detail = await detailRes.json() as {
+          draft: boolean;
+          mergeable_state: string;
+          head: { sha: string };
+        };
+        // Skip draft PRs (draft field is only reliable on the detail response)
+        if (detail.draft) continue;
+        const mergeState = detail.mergeable_state;
+
+        let checksFailing = false;
+        if (mergeState === 'unstable') {
+          const checksRes = await fetch(
+            `${pr.repository_url}/commits/${detail.head.sha}/check-runs?per_page=100`,
+            {
+              headers: {
+                Authorization: `token ${ghConfig.token}`,
+                Accept: 'application/vnd.github+json',
+              },
+            },
+          );
+          if (checksRes.ok) {
+            const checksData = await checksRes.json();
+            const runs = (checksData.check_runs ?? []) as Array<{ status: string }>;
+            checksFailing = !runs.some(
+              (r) => r.status === 'in_progress' || r.status === 'queued',
+            );
+          }
+        }
+
+        // Only fire if we've seen this PR before (avoids notification flood on first run)
+        if (prKey in oldSnapshots) {
+          const notification = getPRNotificationMessage(
+            mergeState,
+            checksFailing,
+            oldSnapshots[prKey],
+            pr.title,
+            repoName,
+            pr.number,
+          );
+          if (notification) {
+            await chrome.notifications.create(`pr-notify:${pr.html_url}`, {
+              type: 'basic',
+              iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+              title: notification.title,
+              message: notification.message,
+            });
+          }
+        }
+
+        newSnapshots[prKey] = { mergeState, checksFailing };
+      } catch {
+        // Preserve last-known-good snapshot on per-PR error
+        if (oldSnapshots[prKey]) newSnapshots[prKey] = oldSnapshots[prKey];
+      }
+    }
+
+    // 6. Save pruned snapshot (only currently open PRs)
+    await chrome.storage.local.set({
+      developer_buddy_pr_notify_state: { snapshots: newSnapshots },
+    });
+  } catch {
+    // Fail silently — next alarm will retry
+  }
+}
+
+async function runDeployNotifyPoll(): Promise<void> {
+  try {
+    // 1. Check deployments config
+    const deplResult = await chrome.storage.local.get('developer_buddy_deployments');
+    const deplConfig = deplResult['developer_buddy_deployments'] as
+      | DeploymentsConfig
+      | undefined;
+    if (!deplConfig?.connections?.length) return;
+
+    // 2. Check notifications enabled
+    const notifResult = await chrome.storage.local.get('developer_buddy_deploy_notifications');
+    const notifSettings = notifResult['developer_buddy_deploy_notifications'] as
+      | { enabled?: boolean }
+      | undefined;
+    if (notifSettings?.enabled === false) return;
+
+    // 3. Load GitHub token (may be null — fetchAllConnections handles this gracefully)
+    const ghResult = await chrome.storage.local.get('developer_buddy_github');
+    const ghToken =
+      (ghResult['developer_buddy_github'] as { token?: string } | undefined)?.token ?? null;
+
+    // 4. Fetch all deployment items
+    const { items } = await fetchAllConnections(deplConfig.connections, ghToken);
+
+    // 5. Load current snapshot
+    const stateResult = await chrome.storage.local.get('developer_buddy_deploy_notify_state');
+    const state = stateResult['developer_buddy_deploy_notify_state'] as
+      | DeployNotificationState
+      | undefined;
+    const oldSnapshots: Record<string, DeploySnapshot> = state?.snapshots ?? {};
+    const newSnapshots: Record<string, DeploySnapshot> = {};
+
+    // 6. Compare and fire notifications
+    for (const item of items) {
+      const notification = getDeployNotificationMessage(item, oldSnapshots[item.id]);
+      if (notification) {
+        await chrome.notifications.create(`deploy-notify:${item.url}`, {
+          type: 'basic',
+          iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+          title: notification.title,
+          message: notification.message,
+        });
+      }
+      newSnapshots[item.id] = {
+        status: item.status,
+        connectionLabel: item.connectionLabel,
+        runName: item.runName,
+        buildRef: item.buildRef,
+        url: item.url,
+      };
+    }
+
+    // 7. Save pruned snapshot
+    await chrome.storage.local.set({
+      developer_buddy_deploy_notify_state: { snapshots: newSnapshots },
+    });
+  } catch {
+    // Fail silently
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'buddy-notify') {
+    runPRNotifyPoll().catch(console.error);
+    runDeployNotifyPoll().catch(console.error);
+  }
+});
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   switch (message.type) {
