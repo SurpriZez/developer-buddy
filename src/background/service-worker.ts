@@ -263,7 +263,7 @@ async function runPRNotifyPoll(): Promise<void> {
             pr.number,
           );
           if (notification) {
-            chrome.notifications.create(`pr-notify:${pr.html_url}`, {
+            await chrome.notifications.create(`pr-notify:${pr.html_url}`, {
               type: 'basic',
               iconUrl: chrome.runtime.getURL('icons/icon48.png'),
               title: notification.title,
