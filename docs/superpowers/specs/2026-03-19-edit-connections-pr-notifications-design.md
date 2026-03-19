@@ -110,9 +110,11 @@ interface PRSnapshot {
 
 ### Background polling (service-worker.ts)
 
-On `chrome.runtime.onInstalled`:
-```
-chrome.alarms.create('pr-notify', { periodInMinutes: 2 })
+On `chrome.runtime.onInstalled`, create the alarm only if it does not already exist (prevents resetting the timer on every extension update):
+```typescript
+chrome.alarms.get('pr-notify', (existing) => {
+  if (!existing) chrome.alarms.create('pr-notify', { periodInMinutes: 2 });
+});
 ```
 
 On `chrome.alarms.onAlarm`:
@@ -126,13 +128,29 @@ if (alarm.name === 'pr-notify') runPRNotifyPoll()
 3. Fetch authored open PRs via search API (`is:pr is:open author:{username}`)
 4. For each non-draft PR, fetch `PRDetail` (mergeable_state + head.sha)
 5. For PRs with state `unstable`, call check-runs API to determine if checks are pending or failing
-6. Compare each PR's new state to its snapshot in `developer_buddy_pr_notify_state`
-7. Fire notification for each **transition**:
+6. Load current `developer_buddy_pr_notify_state` snapshot
+7. Compare each PR's new state to its snapshot — fire notification for each **transition**:
    - `→ clean`: title "Ready to merge", message "{title} — {repo} #{number}"
    - `→ unstable (failing)`: title "Checks failing", message "{title} — {repo} #{number}"
-8. Save updated snapshots back to `developer_buddy_pr_notify_state`
+8. Build updated snapshot from **only the currently open PRs** (prunes closed/merged PRs automatically — keys not in the current search result are dropped)
+9. Save updated snapshots back to `developer_buddy_pr_notify_state`
 
 PRs not in the snapshot yet are recorded but do **not** trigger a notification on first encounter (avoids notification flood on first run or re-enable).
+
+**Snapshot pruning:** The snapshot is rebuilt each poll from only the PRs returned by the current search query. Any PR that has been closed, merged, or otherwise removed from the authored-open list is automatically pruned, preventing unbounded storage growth.
+
+### Notification creation
+
+Notifications are created directly via `chrome.notifications.create` (not via the existing `handleNotification` helper) so that a custom notification ID can be passed and used in the click handler:
+
+```typescript
+chrome.notifications.create(`pr-notify:${pr.html_url}`, {
+  type: 'basic',
+  iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+  title,
+  message,
+});
+```
 
 ### Notification click
 
@@ -147,7 +165,7 @@ Notification IDs use the format `pr-notify:{html_url}` so the click handler can 
 
 ### Opt-out toggle (SelfService.tsx)
 
-A toggle row is added to the Pull Requests panel, below the tab bar and above the PR list:
+A toggle row is added to the Pull Requests panel, **above the tab bar** (above the "My PRs / Review / Merged" tabs), so it applies globally regardless of which tab is active:
 
 ```
 [Bell / BellOff icon]  PR Notifications  [on/off pill toggle]
