@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft, SunMoon, Play } from 'lucide-react';
+import { Terminal, Zap, BookOpen, GitPullRequest, Code, Settings, ArrowLeft, SunMoon, Play, Rocket } from 'lucide-react';
 import { StorageService } from '../shared/storage/StorageService';
 import type { EnvProfile } from '../shared/types';
 import { ScriptList } from './modules/scripts/ScriptList';
@@ -8,9 +8,10 @@ import { DocsList } from './modules/docs/DocsList';
 import { SelfService } from './modules/self-service/SelfService';
 import { UserScriptPanel } from './modules/user-scripts/UserScriptPanel';
 import { ActionsPanel } from './modules/actions/ActionsPanel';
+import { DeploymentsPanel } from './modules/deployments/DeploymentsPanel';
 import { useTheme } from '../shared/theme/useTheme';
 
-type Module = 'scripts' | 'api' | 'docs' | 'pr' | 'user-scripts' | 'actions';
+type Module = 'scripts' | 'api' | 'docs' | 'pr' | 'deployments' | 'user-scripts' | 'actions';
 
 interface ModuleDef {
   id: Module;
@@ -33,6 +34,7 @@ const MODULES: ModuleDef[] = [
   { id: 'api',          label: 'API Tester',   Icon: Zap },
   { id: 'docs',         label: 'Docs',         Icon: BookOpen },
   { id: 'pr',           label: 'Pull Requests', Icon: GitPullRequest },
+  { id: 'deployments',  label: 'Deployments',  Icon: Rocket },
   { id: 'actions',      label: 'Actions',      Icon: Play },
 ];
 
@@ -240,6 +242,7 @@ export default function App() {
             {renderedModule === 'docs'         && <DocsList />}
             {renderedModule === 'pr'           && <SelfService />}
             {renderedModule === 'user-scripts' && <UserScriptPanel />}
+            {renderedModule === 'deployments'   && <DeploymentsPanel />}
             {renderedModule === 'actions'      && <ActionsPanel />}
           </div>
         </div>
