@@ -8,6 +8,8 @@ import {
   Loader2,
   AlertCircle,
   ChevronLeft,
+  Settings2,
+  Pencil,
 } from 'lucide-react';
 import {
   type GitHubActionsConnection,
@@ -157,10 +159,12 @@ function DeploymentsFeed({
   connections,
   refreshKey,
   onRemoveConnection,
+  onEditConnection,
 }: {
   connections: DeploymentConnection[];
   refreshKey: number;
   onRemoveConnection: (id: string) => void;
+  onEditConnection: (id: string, mode: 'details' | 'pipelines') => void;
 }) {
   const [items, setItems] = useState<DeploymentItem[]>([]);
   const [errors, setErrors] = useState<ConnectionError[]>([]);
@@ -257,13 +261,29 @@ function DeploymentsFeed({
               <span className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                 {label}
               </span>
-              <button
-                onClick={() => onRemoveConnection(id)}
-                className="opacity-0 group-hover/header:opacity-100 transition-opacity p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
-                title="Remove connection"
-              >
-                <Trash2 size={12} className="text-red-500" />
-              </button>
+              <div className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity">
+                <button
+                  onClick={() => onEditConnection(id, 'details')}
+                  className="p-1 rounded hover:bg-accent-container transition-colors"
+                  title="Edit connection details"
+                >
+                  <Settings2 size={12} className="text-text-muted" />
+                </button>
+                <button
+                  onClick={() => onEditConnection(id, 'pipelines')}
+                  className="p-1 rounded hover:bg-accent-container transition-colors"
+                  title="Edit pipelines"
+                >
+                  <Pencil size={12} className="text-text-muted" />
+                </button>
+                <button
+                  onClick={() => onRemoveConnection(id)}
+                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                  title="Remove connection"
+                >
+                  <Trash2 size={12} className="text-red-500" />
+                </button>
+              </div>
             </div>
             {connItems.length === 0 ? (
               <p className="text-xs text-text-muted px-3 py-1">No recent deployments</p>
@@ -306,25 +326,44 @@ interface JobOption {
 function AddConnectionForm({
   onSave,
   onCancel,
+  existingConnection,
+  initialStep,
 }: {
   onSave: (conn: DeploymentConnection) => void;
   onCancel: () => void;
+  existingConnection?: DeploymentConnection;
+  initialStep?: 1 | 2;
 }) {
-  const [provider, setProvider] = useState<Provider>('github_actions');
-  const [ghRepo, setGhRepo] = useState('');
-  const [jenkinsUrl, setJenkinsUrl] = useState('');
-  const [jenkinsUsername, setJenkinsUsername] = useState('');
-  const [jenkinsToken, setJenkinsToken] = useState('');
+  const [provider, setProvider] = useState<Provider>(
+    existingConnection?.type === 'jenkins' ? 'jenkins' : 'github_actions',
+  );
+  const [ghRepo, setGhRepo] = useState(
+    existingConnection?.type === 'github_actions' ? existingConnection.repo : '',
+  );
+  const [jenkinsUrl, setJenkinsUrl] = useState(
+    existingConnection?.type === 'jenkins' ? existingConnection.url : '',
+  );
+  const [jenkinsUsername, setJenkinsUsername] = useState(
+    existingConnection?.type === 'jenkins' ? (existingConnection.username ?? '') : '',
+  );
+  const [jenkinsToken, setJenkinsToken] = useState(''); // never pre-fill for security
   const [step1Error, setStep1Error] = useState('');
   const [loadingPipelines, setLoadingPipelines] = useState(false);
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialStep ?? 1);
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<Set<number>>(new Set());
   const [selectedJobNames, setSelectedJobNames] = useState<Set<string>>(new Set());
-  const [label, setLabel] = useState('');
+  const [label, setLabel] = useState(existingConnection?.label ?? '');
   const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if ((initialStep ?? 1) === 2 && existingConnection) {
+      handleLoadPipelines();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLoadPipelines = async () => {
     setStep1Error('');
@@ -342,7 +381,13 @@ function AddConnectionForm({
       try {
         const wfs = await fetchGitHubWorkflows(ghRepo.trim(), token);
         setWorkflows(wfs);
-        setLabel(ghRepo.trim().split('/')[1] ?? ghRepo.trim());
+        if (existingConnection?.type === 'github_actions') {
+          const existingIds = new Set(existingConnection.selectedWorkflows.map((w) => w.id));
+          setSelectedWorkflowIds(existingIds);
+        }
+        if (!existingConnection) {
+          setLabel(ghRepo.trim().split('/')[1] ?? ghRepo.trim());
+        }
         setStep(2);
       } catch (e: unknown) {
         setStep1Error((e as Error).message ?? 'Failed to load workflows');
@@ -362,7 +407,13 @@ function AddConnectionForm({
           jenkinsToken || undefined,
         );
         setJobs(jobList);
-        setLabel('Jenkins');
+        if (existingConnection?.type === 'jenkins') {
+          const existingNames = new Set(existingConnection.selectedJobs.map((j) => j.name));
+          setSelectedJobNames(existingNames);
+        }
+        if (!existingConnection) {
+          setLabel('Jenkins');
+        }
         setStep(2);
       } catch (e: unknown) {
         setStep1Error((e as Error).message ?? 'Failed to load Jenkins jobs');
@@ -387,7 +438,7 @@ function AddConnectionForm({
         .filter((wf) => selectedWorkflowIds.has(wf.id))
         .map((wf) => ({ id: wf.id, name: wf.name, path: wf.path }));
       onSave({
-        id: crypto.randomUUID(),
+        id: existingConnection?.id ?? crypto.randomUUID(),
         type: 'github_actions',
         label: label.trim(),
         repo: ghRepo.trim(),
@@ -402,7 +453,7 @@ function AddConnectionForm({
         .filter((j) => selectedJobNames.has(j.name))
         .map((j) => ({ name: j.name, displayName: j.displayName || j.name }));
       onSave({
-        id: crypto.randomUUID(),
+        id: existingConnection?.id ?? crypto.randomUUID(),
         type: 'jenkins',
         label: label.trim(),
         url: jenkinsUrl.trim(),
@@ -429,11 +480,12 @@ function AddConnectionForm({
               {(['github_actions', 'jenkins'] as Provider[]).map((p) => (
                 <button
                   key={p}
-                  onClick={() => setProvider(p)}
+                  onClick={() => !existingConnection && setProvider(p)}
+                  disabled={!!existingConnection}
                   className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
                     provider === p
                       ? 'bg-accent text-white border-accent'
-                      : 'bg-surface border-theme-border text-text-primary hover:bg-accent-container'
+                      : 'bg-surface border-theme-border text-text-primary hover:bg-accent-container disabled:opacity-50 disabled:cursor-not-allowed'
                   }`}
                 >
                   {p === 'github_actions' ? 'GitHub Actions' : 'Jenkins'}
@@ -615,6 +667,10 @@ function DeploymentsDashboard() {
   const [config, setConfig] = useState<DeploymentsConfig | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingConn, setEditingConn] = useState<{
+    conn: DeploymentConnection;
+    mode: 'details' | 'pipelines';
+  } | null>(null);
 
   useEffect(() => {
     fetchDeploymentsConfig().then(setConfig);
@@ -622,12 +678,19 @@ function DeploymentsDashboard() {
 
   const handleSaveConnection = async (conn: DeploymentConnection) => {
     if (!config) return;
-    const next: DeploymentsConfig = { connections: [...config.connections, conn] };
+    const isEdit = config.connections.some((c) => c.id === conn.id);
+    const updatedConnections = isEdit
+      ? config.connections.map((c) => (c.id === conn.id ? conn : c))
+      : [...config.connections, conn];
+    const next: DeploymentsConfig = { connections: updatedConnections };
     await saveDeploymentsConfig(next);
     setConfig(next);
     setShowForm(false);
+    setEditingConn(null);
     setRefreshKey((k) => k + 1);
   };
+
+  const handleEditCancel = () => setEditingConn(null);
 
   const handleRemoveConnection = async (id: string) => {
     if (!config) return;
@@ -649,7 +712,7 @@ function DeploymentsDashboard() {
 
   return (
     <div className="space-y-3">
-      {!showForm && (
+      {!showForm && !editingConn && (
         <div className="flex items-center gap-2">
           <Rocket size={16} className="text-accent shrink-0" />
           <span className="text-sm font-semibold text-text-primary flex-1">Deployments</span>
@@ -670,13 +733,22 @@ function DeploymentsDashboard() {
         </div>
       )}
 
-      {showForm ? (
-        <AddConnectionForm onSave={handleSaveConnection} onCancel={() => setShowForm(false)} />
+      {showForm || editingConn ? (
+        <AddConnectionForm
+          onSave={handleSaveConnection}
+          onCancel={editingConn ? handleEditCancel : () => setShowForm(false)}
+          existingConnection={editingConn?.conn}
+          initialStep={editingConn?.mode === 'details' ? 1 : 2}
+        />
       ) : (
         <DeploymentsFeed
           connections={config.connections}
           refreshKey={refreshKey}
           onRemoveConnection={handleRemoveConnection}
+          onEditConnection={(id, mode) => {
+            const conn = config.connections.find((c) => c.id === id);
+            if (conn) setEditingConn({ conn, mode });
+          }}
         />
       )}
     </div>
