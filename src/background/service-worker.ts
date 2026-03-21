@@ -12,6 +12,7 @@ import {
   type DeploySnapshot,
 } from '../shared/deployments/deploymentFetcher';
 import { getPRNotificationMessage, type PRSnapshot } from '../shared/pr/prNotificationLogic';
+import { DB_SHIM_CODE } from '../shared/utils/userScriptDbShim';
 
 interface PRNotificationState {
   snapshots: Record<string, PRSnapshot>;
@@ -87,6 +88,13 @@ const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 // Open the side panel when the toolbar icon is clicked
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
+// Configure USER_SCRIPT world to bypass page CSP (e.g. GitHub blocks unsafe-eval).
+// Must be at module scope — does not persist across service worker restarts.
+// cspBypass was added in Chrome 135 and lags in @types/chrome — cast to bypass
+(chrome.userScripts.configureWorld as (c: { cspBypass: boolean }) => Promise<void>)(
+  { cspBypass: true },
+).catch(console.error);
+
 // Clean up any legacy registered content scripts on install
 chrome.runtime.onInstalled.addListener((details) => {
   syncUserScriptRegistrations().catch(console.error);
@@ -119,10 +127,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 // --- User script execution via tabs.onUpdated ---
-// This runs scripts in MAIN world via executeScript, which:
-//   1. Works even on pages with strict CSP (Google, etc.)
-//   2. Has full access to window/document/page globals
-//   3. Doesn't require chrome.storage in the page world
+// Scripts run in USER_SCRIPT world via chrome.userScripts.execute().
+// The USER_SCRIPT world bypasses page CSP (cspBypass: true) and has access
+// to all DOM APIs. A DB shim is injected first to provide window.DB.
 
 function shouldRun(script: UserScript, status: string): boolean {
   if (script.runAt === 'document-idle')  return status === 'complete';
@@ -149,22 +156,28 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!shouldRun(script, changeInfo.status)) continue;
     if (!script.matchPatterns.some((p) => matchesPattern(url, p))) continue;
 
-    const body = script.body;
-    chrome.scripting.executeScript({
-      target: { tabId },
-      world: 'MAIN',
-      func: (scriptBody: string) => {
-        try {
-          // eslint-disable-next-line no-new-func
-          new Function(scriptBody)();
-        } catch (e) {
-          console.error('[Developer Buddy RPA] Script error:', e);
-        }
-      },
-      args: [body],
-    }).catch((err) => {
-      console.warn(`[Developer Buddy] Failed to inject script "${script.name}":`, err);
-    });
+    // chrome.userScripts.execute() requires Chrome 135+.
+    // If unavailable, fall back to scripting.executeScript (works on most pages
+    // but will be blocked by strict CSP pages like GitHub).
+    if (typeof chrome.userScripts?.execute === 'function') {
+      chrome.userScripts.execute({
+        target: { tabId },
+        world: 'USER_SCRIPT',
+        js: [{ code: DB_SHIM_CODE }, { code: script.body }],
+      }).catch((err) => {
+        console.warn(`[Developer Buddy] Failed to inject script "${script.name}":`, err);
+      });
+    } else {
+      console.warn('[Developer Buddy] chrome.userScripts.execute not available — Chrome 135+ required for CSP bypass. Falling back.');
+      chrome.scripting.executeScript({
+        target: { tabId },
+        world: 'MAIN',
+        func: (body: string) => { (0, eval)(body); }, // eslint-disable-line no-eval
+        args: [script.body],
+      }).catch((err) => {
+        console.warn(`[Developer Buddy] Failed to inject script "${script.name}":`, err);
+      });
+    }
   }
 });
 

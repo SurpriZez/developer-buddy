@@ -11,7 +11,8 @@
     "offscreen",
     "notifications",
     "clipboardWrite",
-    "alarms"
+    "alarms",
+    "userScripts"
   ],
   "host_permissions": ["<all_urls>"],
   "background": {
