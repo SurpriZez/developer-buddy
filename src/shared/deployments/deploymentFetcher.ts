@@ -99,7 +99,7 @@ export async function fetchGitHubRuns(
       status: string;
       conclusion: string | null;
     }) => ({
-      id: `gh-${run.id}`,
+      id: `gh-${connectionId}-${run.id}`,
       connectionId,
       provider: 'github_actions' as const,
       connectionLabel,
