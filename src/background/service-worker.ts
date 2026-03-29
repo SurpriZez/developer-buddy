@@ -91,8 +91,8 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(consol
 // Configure USER_SCRIPT world to bypass page CSP (e.g. GitHub blocks unsafe-eval).
 // Must be at module scope — does not persist across service worker restarts.
 // cspBypass was added in Chrome 135 and lags in @types/chrome — cast to bypass.
-// Guard against chrome.userScripts being undefined (Developer Mode off or Chrome < 135).
-if (chrome.userScripts) {
+// Guard against chrome.userScripts or configureWorld being undefined (Developer Mode off or Chrome < 135).
+if (chrome.userScripts?.configureWorld) {
   (chrome.userScripts.configureWorld as (c: { cspBypass: boolean }) => Promise<void>)(
     { cspBypass: true },
   ).catch(console.error);
